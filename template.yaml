@@ -33,6 +33,7 @@ Globals:
         BOOKINGS_TABLE: !Ref BookingsTable
         SNS_TOPIC_ARN: !Ref BookingConfirmationsTopic
   Api:
+    Name: !Sub accra-hospital-api-${Stage}
     Cors:
       AllowMethods: "'GET,POST,PATCH,OPTIONS'"
       AllowHeaders: "'Content-Type,Authorization'"
@@ -414,10 +415,10 @@ Resources:
             NoncurrentVersionExpiration:
               NoncurrentDays: 30
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
 
   FrontendBucketPolicy:
     Type: AWS::S3::BucketPolicy

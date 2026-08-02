@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}
 
 env:
-  AWS_REGION: eu-west-1
+  AWS_REGION: us-east-1
   STACK_NAME: accra-hospital-capstone
 
 jobs:
