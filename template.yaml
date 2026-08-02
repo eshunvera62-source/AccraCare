@@ -54,6 +54,8 @@ Resources:
       KeySchema:
         - AttributeName: id
           KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       TimeToLiveSpecification:
@@ -80,6 +82,8 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       TimeToLiveSpecification:
