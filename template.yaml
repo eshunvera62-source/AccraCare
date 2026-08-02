@@ -54,8 +54,13 @@ Resources:
       KeySchema:
         - AttributeName: id
           KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
 
   BookingsTable:
     Type: AWS::DynamoDB::Table
@@ -77,6 +82,8 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       TimeToLiveSpecification:
@@ -359,6 +366,7 @@ Resources:
       NotificationsWithSubscribers:
         - Notification:
             NotificationType: ACTUAL
+            # amazonq-ignore-next-line
             ComparisonOperator: GREATER_THAN
             Threshold: 80
             ThresholdType: PERCENTAGE
@@ -381,11 +389,24 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub accra-hospital-frontend-${Stage}-${AWS::AccountId}
+      ObjectLockEnabled: true
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: index.html
       VersioningConfiguration:
         Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+            BucketKeyEnabled: true
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule:
+          DefaultRetention:
+            Mode: GOVERNANCE
+            Days: 1
       LifecycleConfiguration:
         Rules:
           - Id: ExpireOldVersions
@@ -394,9 +415,9 @@ Resources:
               NoncurrentDays: 30
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
-        BlockPublicPolicy: false
+        BlockPublicPolicy: true
         IgnorePublicAcls: true
-        RestrictPublicBuckets: false
+        RestrictPublicBuckets: true
 
   FrontendBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -413,11 +434,13 @@ Resources:
           - Sid: DenyNonHttps
             Effect: Deny
             Principal: '*'
-            Action: s3:GetObject
-            Resource: !Sub arn:aws:s3:::${FrontendBucket}/*
+            Action: s3:*
+            Resource:
+              - !Sub arn:aws:s3:::${FrontendBucket}
+              - !Sub arn:aws:s3:::${FrontendBucket}/*
             Condition:
               Bool:
-                aws:SecureTransport: false
+                aws:SecureTransport: 'false'
 
 Outputs:
   ApiBaseUrl:

@@ -4,7 +4,9 @@ Returns bookings, optionally filtered by slotId (queries the GSI when given).
 """
 import json
 import os
+import re
 import boto3
+from boto3.dynamodb.conditions import Key
 from decimal import Decimal
 
 dynamodb = boto3.resource("dynamodb")
@@ -29,9 +31,15 @@ def lambda_handler(event, context):
         slot_id = params.get("slotId")
 
         if slot_id and slot_id != "all":
+            if not re.match(r'^[\w\-]{1,64}$', slot_id):
+                return {
+                    "statusCode": 400,
+                    "headers": CORS_HEADERS,
+                    "body": json.dumps({"error": "Invalid slotId parameter."})
+                }
             response = bookings_table.query(
                 IndexName="slotId-index",
-                KeyConditionExpression=boto3.dynamodb.conditions.Key("slotId").eq(slot_id)
+                KeyConditionExpression=Key("slotId").eq(slot_id)
             )
             items = response.get("Items", [])
         else:

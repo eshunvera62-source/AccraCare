@@ -6,19 +6,36 @@
  * Fill in API_BASE_URL below with the "api_base_url" Terraform output
  * once you have run `terraform apply` (see: terraform output api_base_url).
  * It looks like:
- *   https://abcd123456.execute-api.eu-west-1.amazonaws.com/dev
+ *   https://abcd123456.execute-api.us-east-1.amazonaws.com/dev
  */
 
-export const API_BASE_URL = "REPLACE_WITH_YOUR_API_GATEWAY_INVOKE_URL";
+const DEFAULT_API_BASE_URL = "http://127.0.0.1:3001";
+const configuredApiBaseUrl = "REPLACE_WITH_YOUR_API_GATEWAY_INVOKE_URL";
+export const API_BASE_URL = (typeof window !== "undefined" && window.__ACCRA_API_BASE_URL__) ||
+  (configuredApiBaseUrl.startsWith('REPLACE_') ? DEFAULT_API_BASE_URL : configuredApiBaseUrl);
 
-if (!API_BASE_URL || API_BASE_URL.startsWith('REPLACE_')) {
+// Guard: fail fast if URL is unconfigured or not a valid local/HTTPS API URL
+if (!API_BASE_URL) {
   const grid = document.getElementById('slots-grid');
   if (grid) grid.innerHTML = '<p style="color:red;padding:2rem;">Configuration error: API_BASE_URL is not set in frontend/scripts/api.js.</p>';
   throw new Error('API_BASE_URL is not configured.');
 }
+try {
+  const parsed = new URL(API_BASE_URL);
+  const isLocalHttp = parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost');
+  if (parsed.protocol !== 'https:' && !isLocalHttp) {
+    throw new Error('API_BASE_URL must be an HTTPS API Gateway URL (*.amazonaws.com) or a local http://127.0.0.1 URL.');
+  }
+} catch (e) {
+  throw new Error(`Invalid API_BASE_URL: ${e.message}`);
+}
 
 async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const url = new URL(path, API_BASE_URL + "/");
+  if (!url.href.startsWith(API_BASE_URL)) {
+    throw new Error(`Blocked request to disallowed URL: ${url.href}`);
+  }
+  const res = await fetch(url.href, {
     headers: { "Content-Type": "application/json" },
     ...options
   });

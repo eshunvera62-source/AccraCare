@@ -25,7 +25,11 @@ def decimal_default(obj):
 
 def lambda_handler(event, context):
     try:
-        response = slots_table.scan()
+        response = slots_table.scan(
+            ProjectionExpression="id, hospitalName, area, department, doctorName, "
+                                 "doctorTitle, #dt, availableSeats, totalSeats, #s, consultationFee",
+            ExpressionAttributeNames={"#dt": "dateTime", "#s": "status"}
+        )
         items = response.get("Items", [])
 
         # Paginate through the full table (fine for capstone-scale data)
