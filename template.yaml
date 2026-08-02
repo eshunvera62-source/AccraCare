@@ -384,11 +384,18 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub accra-hospital-frontend-${Stage}-${AWS::AccountId}
+      ObjectLockEnabled: true
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: index.html
       VersioningConfiguration:
         Status: Enabled
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule:
+          DefaultRetention:
+            Mode: GOVERNANCE
+            Days: 1
       LifecycleConfiguration:
         Rules:
           - Id: ExpireOldVersions
