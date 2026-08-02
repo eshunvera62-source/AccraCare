@@ -9,6 +9,7 @@ import json
 import os
 import re
 import boto3
+from boto3.dynamodb.conditions import Key
 from decimal import Decimal
 from botocore.exceptions import ClientError
 
@@ -48,7 +49,7 @@ def lambda_handler(event, context):
                 "body": json.dumps({"error": "status must be 'available' or 'full'"})
             }
 
-        current = slots_table.get_item(Key={"id": slot_id}).get("Item")
+        current = slots_table.get_item(Key={"id": str(slot_id)}).get("Item")
         if not current:
             return {
                 "statusCode": 404,
@@ -66,7 +67,7 @@ def lambda_handler(event, context):
             values = {":seats": restored_seats, ":status": new_status}
 
         updated = slots_table.update_item(
-            Key={"id": slot_id},
+            Key={"id": str(slot_id)},
             UpdateExpression=seats_expr,
             ExpressionAttributeNames={"#s": "status"},
             ExpressionAttributeValues=values,

@@ -19,6 +19,7 @@ import secrets
 import time
 import uuid
 import boto3
+from boto3.dynamodb.conditions import Key
 from decimal import Decimal
 from botocore.exceptions import ClientError
 
@@ -67,12 +68,12 @@ def lambda_handler(event, context):
         # Force-full test hook, mirrors the frontend's "simulateSlotFullError" checkbox
         if body.get("simulateSlotFullError"):
             slots_table.update_item(
-                Key={"id": slot_id},
+                Key={"id": str(slot_id)},
                 UpdateExpression="SET availableSeats = :zero, #s = :full",
                 ExpressionAttributeNames={"#s": "status"},
                 ExpressionAttributeValues={":zero": 0, ":full": "full"}
             )
-            updated = slots_table.get_item(Key={"id": slot_id}).get("Item")
+            updated = slots_table.get_item(Key={"id": str(slot_id)}).get("Item")
             return {
                 "statusCode": 409,
                 "headers": CORS_HEADERS,
@@ -86,7 +87,7 @@ def lambda_handler(event, context):
             # Conditional update: only decrement if a seat is actually available.
             # This is what prevents the race condition the frontend simulates.
             updated_slot = slots_table.update_item(
-                Key={"id": slot_id},
+                Key={"id": str(slot_id)},
                 UpdateExpression="SET availableSeats = availableSeats - :one, "
                                   "#s = if_not_exists(#s, :avail)",
                 ConditionExpression="attribute_exists(id) AND availableSeats > :zero",
@@ -96,7 +97,7 @@ def lambda_handler(event, context):
             )["Attributes"]
         except ClientError as ce:
             if ce.response["Error"]["Code"] == "ConditionalCheckFailedException":
-                current = slots_table.get_item(Key={"id": slot_id}).get("Item")
+                current = slots_table.get_item(Key={"id": str(slot_id)}).get("Item")
                 if current is None:
                     return {
                         "statusCode": 404,
@@ -116,7 +117,7 @@ def lambda_handler(event, context):
         # If seats hit zero, flip status to full
         if int(updated_slot.get("availableSeats", 0)) <= 0 and updated_slot.get("status") != "full":
             updated_slot = slots_table.update_item(
-                Key={"id": slot_id},
+                Key={"id": str(slot_id)},
                 UpdateExpression="SET #s = :full",
                 ExpressionAttributeNames={"#s": "status"},
                 ExpressionAttributeValues={":full": "full"},
