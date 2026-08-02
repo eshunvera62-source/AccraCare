@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accra Hospitals — Outpatient Appointment Platform</title>
+
+  <!-- Google Fonts: Newsreader (Headline Serif) + IBM Plex Sans (Body Sans) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,600&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/components.css">
+</head>
+<body>
+
+  <!-- Prototype disclaimer — required, do not soften or remove -->
+  <aside class="demo-banner" style="background-color: var(--accent-light); border-bottom-color: var(--accent-border); color: var(--accent-hover);">
+    <p>
+      <strong>Demo platform</strong> — not affiliated with any hospital and not a real booking channel. Sample hospital names (e.g. Korle Bu, 37 Military, Ridge, Trust, Nyaho) are used for illustrative realism only.
+    </p>
+  </aside>
+
+  <!-- Navigation Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-title">
+        AccraCare
+        <span class="brand-location">Accra, Ghana • Outpatient Directory</span>
+      </a>
+
+      <div class="header-search">
+        <svg class="header-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="text" id="search-input" placeholder="Search hospital, doctor name, area (e.g. Osu, Ridge)..." aria-label="Search appointments" />
+      </div>
+
+      <!-- Admin access intentionally not linked here — hospital staff reach
+           admin.html directly by URL, not via patient-facing navigation. -->
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="page-container">
+
+    <!-- Hero Section with Asymmetric Image -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <h1 class="hero-headline">
+          Direct Outpatient Appointments <em class="serif-italic">Across Accra's</em> Leading Hospitals.
+        </h1>
+        <p class="hero-subline">
+          View real-time consultation slots, compare departments, and reserve verified outpatient time slots across Accra without waiting in morning queue lines.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#catalog-section" class="btn btn-primary">Browse Available Slots</a>
+          <a href="#how-it-works" class="btn btn-outline">How Booking Works</a>
+        </div>
+      </div>
+
+      <div class="hero-image-wrapper">
+        <img src="assets/accra_patient_hero.jpg" alt="Healthcare consultation at Accra hospital" />
+        <div class="hero-image-caption">
+          <strong>Accra Outpatient Directory:</strong> Supporting Korle Bu, 37 Military, Ridge, Trust Hospital & Nyaho Medical Centre.
+        </div>
+      </div>
+    </section>
+
+    <!-- Catalog Section -->
+    <section id="catalog-section" style="scroll-margin-top: 5rem;">
+      <div class="catalog-header">
+        <div>
+          <h2>Available Outpatient Slots</h2>
+          <p>Real-time availability for specialist consultations in Accra</p>
+        </div>
+
+        <!-- Filter Bar Controls -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label for="hospital-select">Facility:</label>
+            <select id="hospital-select" class="filter-select">
+              <option value="all">All Accra Hospitals</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="dept-select">Specialty:</label>
+            <select id="dept-select" class="filter-select">
+              <option value="all">All Departments</option>
+            </select>
+          </div>
+
+          <div class="filter-group" style="margin-left: 0.5rem;">
+            <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" data-status-filter="all">All Slots</button>
+            <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" data-status-filter="available">Available Only</button>
+            <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" data-status-filter="full">Full / Unavailable</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slots Grid populated by slots.js -->
+      <div id="slots-grid" class="slots-grid">
+        <div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--text-soft);">
+          Loading appointment slots...
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" style="margin-top: 4rem; padding-top: 3rem; border-top: 1px solid var(--border-light);">
+      <h2 style="margin-bottom: 1.5rem; text-align: center;">How AccraCare Outpatient Booking Works</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-light); padding: 1.5rem; border-radius: 8px;">
+          <div style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--accent-primary); font-weight: 700;">01</div>
+          <h3 style="font-size: 1.1rem; margin: 0.5rem 0;">Select Hospital & Specialty</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Choose from top Accra facilities including Korle Bu, 37 Military, Ridge, Trust, Nyaho, or Lister Hospital.</p>
+        </div>
+
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-light); padding: 1.5rem; border-radius: 8px;">
+          <div style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--accent-primary); font-weight: 700;">02</div>
+          <h3 style="font-size: 1.1rem; margin: 0.5rem 0;">Enter Patient Contact Details</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Provide your phone number (+233 format). Your appointment reference is generated immediately.</p>
+        </div>
+
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-light); padding: 1.5rem; border-radius: 8px;">
+          <div style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--accent-primary); font-weight: 700;">03</div>
+          <h3 style="font-size: 1.1rem; margin: 0.5rem 0;">Receive SMS Confirmation</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Present your unique confirmation code (ACC-XXXXXX) upon arrival at the hospital reception Desk.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Booking Modal Overlay -->
+  <div id="booking-modal-overlay" class="modal-overlay">
+    <div class="modal-card">
+      <div id="modal-card-content">
+        <!-- Form rendered dynamically by booking.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Site Footer -->
+  <footer style="background-color: var(--bg-surface); border-top: 1px solid var(--border-light); margin-top: 5rem; padding: 3rem 1.5rem; font-size: 0.85rem; color: var(--text-soft);">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2rem;">
+      <div style="max-width: 400px;">
+        <div style="font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">Accra Outpatient Booking Platform</div>
+        <p style="font-size: 0.8rem; color: var(--text-soft);">
+          Demo prototype. Hospital names shown are used as realistic sample data only and do not indicate any real partnership, integration, or actual appointment availability.
+        </p>
+      </div>
+
+      <div>
+        <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">Sample Accra Locations</div>
+        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem;">
+          <li>Korle Gonno (Korle Bu)</li>
+          <li>Cantonments (37 Military)</li>
+          <li>Ridge Central (GARH)</li>
+          <li>Osu (Trust Hospital)</li>
+          <li>Airport Residential (Nyaho)</li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Native ES Module Application Script -->
+  <script type="module" src="scripts/app.js"></script>
+</body>
+</html>

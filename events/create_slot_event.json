@@ -1,0 +1,8 @@
+{
+  "httpMethod": "POST",
+  "path": "/slots",
+  "pathParameters": null,
+  "queryStringParameters": null,
+  "body": "{\"hospitalName\": \"Korle Bu Teaching Hospital\", \"area\": \"Korle Gonno, Accra\", \"department\": \"Cardiology\", \"doctorName\": \"Dr. Kwame Mensah\", \"dateTime\": \"2026-09-01T09:30:00\", \"totalSeats\": 5}",
+  "headers": { "Content-Type": "application/json" }
+}

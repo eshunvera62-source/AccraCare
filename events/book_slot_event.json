@@ -1,0 +1,8 @@
+{
+  "httpMethod": "POST",
+  "path": "/slots/slot-acc-01/book",
+  "pathParameters": { "slotId": "slot-acc-01" },
+  "queryStringParameters": null,
+  "body": "{\"name\": \"Ama Serwaa\", \"phone\": \"+233241234567\", \"email\": \"ama@example.com\"}",
+  "headers": { "Content-Type": "application/json" }
+}

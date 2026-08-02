@@ -1,0 +1,114 @@
+name: Deploy AccraCare Capstone
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+env:
+  AWS_REGION: eu-west-1
+  STACK_NAME: accra-hospital-capstone
+
+jobs:
+  build_and_deploy:
+    name: SAM build and deploy (backend infrastructure)
+    runs-on: ubuntu-latest
+    outputs:
+      api_base_url: ${{ steps.stack_outputs.outputs.api_base_url }}
+      frontend_bucket_name: ${{ steps.stack_outputs.outputs.frontend_bucket_name }}
+      slots_table_name: ${{ steps.stack_outputs.outputs.slots_table_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: SAM validate
+        run: sam validate --lint
+
+      - name: SAM build
+        run: sam build
+
+      - name: SAM deploy
+        run: |
+          sam deploy \
+            --stack-name ${{ env.STACK_NAME }} \
+            --region ${{ env.AWS_REGION }} \
+            --capabilities CAPABILITY_IAM \
+            --resolve-s3 \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              Stage=dev \
+              BudgetLimitUsd=5 \
+              BudgetAlertEmail=${{ secrets.BUDGET_ALERT_EMAIL }} \
+              NotificationEmail=${{ secrets.NOTIFICATION_EMAIL }}
+
+      - name: Capture stack outputs
+        id: stack_outputs
+        run: |
+          get_output() {
+            aws cloudformation describe-stacks \
+              --stack-name ${{ env.STACK_NAME }} \
+              --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" \
+              --output text
+          }
+          echo "api_base_url=$(get_output ApiBaseUrl)" >> "$GITHUB_OUTPUT"
+          echo "frontend_bucket_name=$(get_output FrontendBucketName)" >> "$GITHUB_OUTPUT"
+          echo "slots_table_name=$(get_output SlotsTableName)" >> "$GITHUB_OUTPUT"
+
+  seed_data:
+    name: Seed DynamoDB slots table
+    needs: build_and_deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install boto3
+        run: pip install boto3
+
+      - name: Load seed slots
+        working-directory: backend/seed
+        run: |
+          python load_seed_data.py "${{ needs.build_and_deploy.outputs.slots_table_name }}" --region ${{ env.AWS_REGION }}
+
+  deploy_frontend:
+    name: Sync frontend to S3
+    needs: build_and_deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Inject deployed API URL into frontend
+        run: |
+          sed -i "s#REPLACE_WITH_YOUR_API_GATEWAY_INVOKE_URL#${{ needs.build_and_deploy.outputs.api_base_url }}#g" frontend/scripts/api.js
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync frontend/ "s3://${{ needs.build_and_deploy.outputs.frontend_bucket_name }}" --delete

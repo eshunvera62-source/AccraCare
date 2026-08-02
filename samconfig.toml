@@ -1,0 +1,18 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "accra-hospital-capstone"
+resolve_s3 = true
+s3_prefix = "accra-hospital-capstone"
+region = "eu-west-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Stage=\"dev\" BudgetLimitUsd=\"5\" BudgetAlertEmail=\"your-email@example.com\" NotificationEmail=\"your-email@example.com\""
+image_repositories = []
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.validate.parameters]
+lint = true

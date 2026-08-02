@@ -1,0 +1,8 @@
+{
+  "httpMethod": "GET",
+  "path": "/bookings",
+  "pathParameters": null,
+  "queryStringParameters": { "slotId": "slot-acc-01" },
+  "body": null,
+  "headers": { "Content-Type": "application/json" }
+}
