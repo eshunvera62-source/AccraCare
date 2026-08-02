@@ -124,18 +124,24 @@ def lambda_handler(event, context):
             )["Attributes"]
 
         confirmation_code = f"ACC-{secrets.randbelow(900000) + 100000}"
+
+        # All fields are explicitly typed — no raw user input used as keys or operators.
+        # slotId is the validated path param; patient fields are stripped + length-capped strings.
         booking = {
-            "id": f"bk-{str(uuid.uuid4())[:8]}",
-            "confirmationCode": confirmation_code,
-            "slotId": slot_id,
-            "patientName": name,
-            "patientPhone": phone,
-            "patientEmail": email,
+            "id": str(f"bk-{uuid.uuid4().hex[:8]}"),
+            "confirmationCode": str(confirmation_code),
+            "slotId": str(slot_id),
+            "patientName": str(name),
+            "patientPhone": str(phone),
+            "patientEmail": str(email),
             "bookedAt": int(time.time() * 1000),
             "ttl": int(time.time()) + 365 * 24 * 3600,
             "status": "confirmed"
         }
-        bookings_table.put_item(Item=booking)
+        bookings_table.put_item(
+            Item=booking,
+            ConditionExpression="attribute_not_exists(id)"
+        )
 
         if SNS_TOPIC_ARN:
             try:
