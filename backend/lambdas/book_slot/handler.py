@@ -14,7 +14,8 @@ mock api.js already expects, so booking.js needs no changes.
 """
 import json
 import os
-import random
+import re
+import secrets
 import time
 import uuid
 import boto3
@@ -43,11 +44,18 @@ def decimal_default(obj):
 def lambda_handler(event, context):
     try:
         slot_id = event["pathParameters"]["slotId"]
+        if not re.match(r'^[\w\-]{1,64}$', slot_id):
+            return {
+                "statusCode": 400,
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"success": False, "error": "Invalid slot ID."})
+            }
+
         body = json.loads(event.get("body") or "{}")
 
-        name = (body.get("name") or "").strip()
-        phone = (body.get("phone") or "").strip()
-        email = (body.get("email") or "").strip()
+        name = (body.get("name") or "").strip()[:200]
+        phone = (body.get("phone") or "").strip()[:50]
+        email = (body.get("email") or "").strip()[:200]
 
         if not name or not phone:
             return {
@@ -115,7 +123,7 @@ def lambda_handler(event, context):
                 ReturnValues="ALL_NEW"
             )["Attributes"]
 
-        confirmation_code = f"ACC-{random.randint(100000, 999999)}"
+        confirmation_code = f"ACC-{secrets.randbelow(900000) + 100000}"
         booking = {
             "id": f"bk-{str(uuid.uuid4())[:8]}",
             "confirmationCode": confirmation_code,
@@ -123,7 +131,8 @@ def lambda_handler(event, context):
             "patientName": name,
             "patientPhone": phone,
             "patientEmail": email,
-            "bookedAt": str(int(time.time() * 1000)),
+            "bookedAt": int(time.time() * 1000),
+            "ttl": int(time.time()) + 365 * 24 * 3600,
             "status": "confirmed"
         }
         bookings_table.put_item(Item=booking)

@@ -11,6 +11,12 @@
 
 export const API_BASE_URL = "REPLACE_WITH_YOUR_API_GATEWAY_INVOKE_URL";
 
+if (!API_BASE_URL || API_BASE_URL.startsWith('REPLACE_')) {
+  const grid = document.getElementById('slots-grid');
+  if (grid) grid.innerHTML = '<p style="color:red;padding:2rem;">Configuration error: API_BASE_URL is not set in frontend/scripts/api.js.</p>';
+  throw new Error('API_BASE_URL is not configured.');
+}
+
 async function apiFetch(path, options = {}) {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },

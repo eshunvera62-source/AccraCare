@@ -79,6 +79,9 @@ Resources:
             ProjectionType: ALL
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
 
   # ---------------------------------------------------------------------
   # SNS
@@ -87,6 +90,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub accra-hospital-booking-confirmations-${Stage}
+      KmsMasterKeyId: alias/aws/sns
 
   BookingConfirmationsSubscription:
     Type: AWS::SNS::Subscription
@@ -94,6 +98,20 @@ Resources:
       TopicArn: !Ref BookingConfirmationsTopic
       Protocol: email
       Endpoint: !Ref NotificationEmail
+
+  # Separate ops topic so Lambda/API alarms don't mix with patient booking emails
+  OpsAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub accra-hospital-ops-alerts-${Stage}
+      KmsMasterKeyId: alias/aws/sns
+
+  OpsAlertsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref OpsAlertsTopic
+      Protocol: email
+      Endpoint: !Ref BudgetAlertEmail
 
   # ---------------------------------------------------------------------
   # Lambda functions (each an implicit API Gateway event)
@@ -231,7 +249,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
       AlarmActions:
-        - !Ref BookingConfirmationsTopic
+        - !Ref OpsAlertsTopic
 
   CreateSlotErrorAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -249,7 +267,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
       AlarmActions:
-        - !Ref BookingConfirmationsTopic
+        - !Ref OpsAlertsTopic
 
   BookSlotErrorAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -267,7 +285,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
       AlarmActions:
-        - !Ref BookingConfirmationsTopic
+        - !Ref OpsAlertsTopic
 
   GetBookingsErrorAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -285,7 +303,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
       AlarmActions:
-        - !Ref BookingConfirmationsTopic
+        - !Ref OpsAlertsTopic
 
   UpdateSlotStatusErrorAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -303,7 +321,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
       AlarmActions:
-        - !Ref BookingConfirmationsTopic
+        - !Ref OpsAlertsTopic
 
   Api5xxAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -323,7 +341,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
       AlarmActions:
-        - !Ref BookingConfirmationsTopic
+        - !Ref OpsAlertsTopic
 
   # ---------------------------------------------------------------------
   # AWS Budgets
@@ -366,10 +384,18 @@ Resources:
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: index.html
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
+        BlockPublicAcls: true
         BlockPublicPolicy: false
-        IgnorePublicAcls: false
+        IgnorePublicAcls: true
         RestrictPublicBuckets: false
 
   FrontendBucketPolicy:
@@ -384,6 +410,14 @@ Resources:
             Principal: '*'
             Action: s3:GetObject
             Resource: !Sub arn:aws:s3:::${FrontendBucket}/*
+          - Sid: DenyNonHttps
+            Effect: Deny
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${FrontendBucket}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: false
 
 Outputs:
   ApiBaseUrl:
@@ -398,5 +432,7 @@ Outputs:
     Value: !Ref FrontendBucket
   FrontendWebsiteUrl:
     Value: !GetAtt FrontendBucket.WebsiteURL
+  OpsAlertsTopicArn:
+    Value: !Ref OpsAlertsTopic
   SnsTopicArn:
     Value: !Ref BookingConfirmationsTopic

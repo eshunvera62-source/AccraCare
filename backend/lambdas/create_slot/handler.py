@@ -51,6 +51,22 @@ def lambda_handler(event, context):
             }
 
         total_seats = int(body["totalSeats"])
+        if not (1 <= total_seats <= 100):
+            return {
+                "statusCode": 400,
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"error": "totalSeats must be between 1 and 100."})
+            }
+
+        MAX_LEN = 200
+        for field in ["hospitalName", "area", "department", "doctorName", "doctorTitle"]:
+            val = str(body.get(field, ""))
+            if len(val) > MAX_LEN:
+                return {
+                    "statusCode": 400,
+                    "headers": CORS_HEADERS,
+                    "body": json.dumps({"error": f"{field} exceeds maximum length of {MAX_LEN} characters."})
+                }
         slot_id = f"slot-acc-{str(uuid.uuid4())[:8]}"
 
         item = {
