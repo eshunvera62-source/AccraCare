@@ -413,11 +413,13 @@ Resources:
           - Sid: DenyNonHttps
             Effect: Deny
             Principal: '*'
-            Action: s3:GetObject
-            Resource: !Sub arn:aws:s3:::${FrontendBucket}/*
+            Action: s3:*
+            Resource:
+              - !Sub arn:aws:s3:::${FrontendBucket}
+              - !Sub arn:aws:s3:::${FrontendBucket}/*
             Condition:
               Bool:
-                aws:SecureTransport: false
+                aws:SecureTransport: 'false'
 
 Outputs:
   ApiBaseUrl:
