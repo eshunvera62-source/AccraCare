@@ -14,7 +14,8 @@ mock api.js already expects, so booking.js needs no changes.
 """
 import json
 import os
-import random
+import re
+import secrets
 import time
 import uuid
 import boto3
@@ -43,11 +44,18 @@ def decimal_default(obj):
 def lambda_handler(event, context):
     try:
         slot_id = event["pathParameters"]["slotId"]
+        if not re.match(r'^[\w\-]{1,64}$', slot_id):
+            return {
+                "statusCode": 400,
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"success": False, "error": "Invalid slot ID."})
+            }
+
         body = json.loads(event.get("body") or "{}")
 
-        name = (body.get("name") or "").strip()
-        phone = (body.get("phone") or "").strip()
-        email = (body.get("email") or "").strip()
+        name = (body.get("name") or "").strip()[:200]
+        phone = (body.get("phone") or "").strip()[:50]
+        email = (body.get("email") or "").strip()[:200]
 
         if not name or not phone:
             return {
@@ -115,18 +123,25 @@ def lambda_handler(event, context):
                 ReturnValues="ALL_NEW"
             )["Attributes"]
 
-        confirmation_code = f"ACC-{random.randint(100000, 999999)}"
+        confirmation_code = f"ACC-{secrets.randbelow(900000) + 100000}"
+
+        # All fields are explicitly typed — no raw user input used as keys or operators.
+        # slotId is the validated path param; patient fields are stripped + length-capped strings.
         booking = {
-            "id": f"bk-{str(uuid.uuid4())[:8]}",
-            "confirmationCode": confirmation_code,
-            "slotId": slot_id,
-            "patientName": name,
-            "patientPhone": phone,
-            "patientEmail": email,
-            "bookedAt": str(int(time.time() * 1000)),
+            "id": str(f"bk-{uuid.uuid4().hex[:8]}"),
+            "confirmationCode": str(confirmation_code),
+            "slotId": str(slot_id),
+            "patientName": str(name),
+            "patientPhone": str(phone),
+            "patientEmail": str(email),
+            "bookedAt": int(time.time() * 1000),
+            "ttl": int(time.time()) + 365 * 24 * 3600,
             "status": "confirmed"
         }
-        bookings_table.put_item(Item=booking)
+        bookings_table.put_item(
+            Item=booking,
+            ConditionExpression="attribute_not_exists(id)"
+        )
 
         if SNS_TOPIC_ARN:
             try:

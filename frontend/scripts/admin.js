@@ -36,12 +36,7 @@ function setupAuthFormListeners() {
 
       if (emailInput) emailInput.value = btn.dataset.email || '';
       if (facilitySelect) facilitySelect.value = btn.dataset.facility || '';
-      if (passwordInput) passwordInput.value = 'accramed2026';
-
-      // Auto trigger submit
-      if (loginForm) {
-        loginForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-      }
+      if (passwordInput) passwordInput.value = '';
     });
   });
 

@@ -7,6 +7,7 @@ Expected JSON body:
 """
 import json
 import os
+import re
 import boto3
 from decimal import Decimal
 from botocore.exceptions import ClientError
@@ -30,6 +31,13 @@ def decimal_default(obj):
 def lambda_handler(event, context):
     try:
         slot_id = event["pathParameters"]["slotId"]
+        if not re.match(r'^[\w\-]{1,64}$', slot_id):
+            return {
+                "statusCode": 400,
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"error": "Invalid slot ID."})
+            }
+
         body = json.loads(event.get("body") or "{}")
         new_status = body.get("status")
 
