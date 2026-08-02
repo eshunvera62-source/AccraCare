@@ -11,10 +11,19 @@
 
 export const API_BASE_URL = "REPLACE_WITH_YOUR_API_GATEWAY_INVOKE_URL";
 
+// Guard: fail fast if URL is unconfigured or not a valid HTTPS API Gateway URL
 if (!API_BASE_URL || API_BASE_URL.startsWith('REPLACE_')) {
   const grid = document.getElementById('slots-grid');
   if (grid) grid.innerHTML = '<p style="color:red;padding:2rem;">Configuration error: API_BASE_URL is not set in frontend/scripts/api.js.</p>';
   throw new Error('API_BASE_URL is not configured.');
+}
+try {
+  const parsed = new URL(API_BASE_URL);
+  if (parsed.protocol !== 'https:' || !parsed.hostname.endsWith('.amazonaws.com')) {
+    throw new Error('API_BASE_URL must be an HTTPS API Gateway URL (*.amazonaws.com).');
+  }
+} catch (e) {
+  throw new Error(`Invalid API_BASE_URL: ${e.message}`);
 }
 
 async function apiFetch(path, options = {}) {

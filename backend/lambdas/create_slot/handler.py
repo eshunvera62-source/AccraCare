@@ -67,24 +67,28 @@ def lambda_handler(event, context):
                     "headers": CORS_HEADERS,
                     "body": json.dumps({"error": f"{field} exceeds maximum length of {MAX_LEN} characters."})
                 }
-        slot_id = f"slot-acc-{str(uuid.uuid4())[:8]}"
+        slot_id = str(f"slot-acc-{uuid.uuid4().hex[:8]}")
 
+        # Explicitly type all fields — no raw user input used as keys or operators
         item = {
-            "id": slot_id,
-            "hospitalName": body["hospitalName"],
-            "area": body["area"],
-            "department": body["department"],
-            "doctorName": body["doctorName"],
-            "doctorTitle": body.get("doctorTitle", "Specialist Consultant"),
-            "dateTime": body["dateTime"],
-            "availableSeats": total_seats,
-            "totalSeats": total_seats,
+            "id": str(slot_id),
+            "hospitalName": str(body["hospitalName"])[:200],
+            "area": str(body["area"])[:200],
+            "department": str(body["department"])[:200],
+            "doctorName": str(body["doctorName"])[:200],
+            "doctorTitle": str(body.get("doctorTitle", "Specialist Consultant"))[:200],
+            "dateTime": str(body["dateTime"])[:50],
+            "availableSeats": int(total_seats),
+            "totalSeats": int(total_seats),
             "status": "available" if total_seats > 0 else "full",
-            "consultationFee": body.get("consultationFee", "GHS 150"),
+            "consultationFee": str(body.get("consultationFee", "GHS 150"))[:50],
             "createdAt": str(int(time.time() * 1000))
         }
 
-        slots_table.put_item(Item=item)
+        slots_table.put_item(
+            Item=item,
+            ConditionExpression="attribute_not_exists(id)"
+        )
 
         return {
             "statusCode": 201,
