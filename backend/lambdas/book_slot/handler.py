@@ -65,24 +65,6 @@ def lambda_handler(event, context):
                 "body": json.dumps({"success": False, "error": "Patient name and phone are required."})
             }
 
-        # Force-full test hook, mirrors the frontend's "simulateSlotFullError" checkbox
-        if body.get("simulateSlotFullError"):
-            slots_table.update_item(
-                Key={"id": str(slot_id)},
-                UpdateExpression="SET availableSeats = :zero, #s = :full",
-                ExpressionAttributeNames={"#s": "status"},
-                ExpressionAttributeValues={":zero": 0, ":full": "full"}
-            )
-            updated = slots_table.get_item(Key={"id": str(slot_id)}).get("Item")
-            return {
-                "statusCode": 409,
-                "headers": CORS_HEADERS,
-                "body": json.dumps(
-                    {"success": False, "error": "SLOT_JUST_FILLED", "updatedSlot": updated},
-                    default=decimal_default
-                )
-            }
-
         try:
             # Conditional update: only decrement if a seat is actually available.
             # This is what prevents the race condition the frontend simulates.
