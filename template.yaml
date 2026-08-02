@@ -404,9 +404,9 @@ Resources:
               NoncurrentDays: 30
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
-        BlockPublicPolicy: false
+        BlockPublicPolicy: true
         IgnorePublicAcls: true
-        RestrictPublicBuckets: false
+        RestrictPublicBuckets: true
 
   FrontendBucketPolicy:
     Type: AWS::S3::BucketPolicy
