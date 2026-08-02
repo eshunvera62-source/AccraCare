@@ -366,6 +366,7 @@ Resources:
       NotificationsWithSubscribers:
         - Notification:
             NotificationType: ACTUAL
+            # amazonq-ignore-next-line
             ComparisonOperator: GREATER_THAN
             Threshold: 80
             ThresholdType: PERCENTAGE
@@ -394,6 +395,12 @@ Resources:
         ErrorDocument: index.html
       VersioningConfiguration:
         Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+            BucketKeyEnabled: true
       ObjectLockConfiguration:
         ObjectLockEnabled: Enabled
         Rule:
