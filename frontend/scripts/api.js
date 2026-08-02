@@ -27,7 +27,11 @@ try {
 }
 
 async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const url = new URL(path, API_BASE_URL + "/");
+  if (!url.href.startsWith(API_BASE_URL)) {
+    throw new Error(`Blocked request to disallowed URL: ${url.href}`);
+  }
+  const res = await fetch(url.href, {
     headers: { "Content-Type": "application/json" },
     ...options
   });
