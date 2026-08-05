@@ -224,6 +224,12 @@ Resources:
   # ---------------------------------------------------------------------
   HealthFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-health-${Stage}
       Runtime: nodejs22.x
@@ -239,15 +245,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /health
             Method: get
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   StatusFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-status-${Stage}
       Runtime: nodejs22.x
@@ -263,15 +269,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /status
             Method: get
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   ListDoctorsFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-list-doctors-${Stage}
       Runtime: nodejs22.x
@@ -290,15 +296,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /doctors
             Method: get
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   CreateDoctorFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-create-doctor-${Stage}
       Runtime: nodejs22.x
@@ -317,15 +323,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /doctors
             Method: post
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   ListAppointmentsFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-list-appointments-${Stage}
       Runtime: nodejs22.x
@@ -344,15 +350,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /appointments
             Method: get
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   CreateAppointmentFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-create-appointment-${Stage}
       Runtime: nodejs22.x
@@ -371,15 +377,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /appointments
             Method: post
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   GetAppointmentsByEmailFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-get-appointments-by-email-${Stage}
       Runtime: nodejs22.x
@@ -398,15 +404,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /appointments/{email}
             Method: get
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   DeleteAppointmentFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-delete-appointment-${Stage}
       Runtime: nodejs22.x
@@ -425,12 +431,6 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /appointments/{id}
             Method: delete
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   DeleteBookingFunction:
     Type: AWS::Serverless::Function
@@ -476,6 +476,12 @@ Resources:
 
   GetSlotsFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-get-slots-${Stage}
       Runtime: nodejs22.x
@@ -494,15 +500,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /slots
             Method: get
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   CreateSlotFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-create-slot-${Stage}
       Runtime: nodejs22.x
@@ -521,15 +527,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /slots
             Method: post
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   BookSlotFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-book-slot-${Stage}
       Runtime: nodejs22.x
@@ -554,15 +560,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /slots/{slotId}/book
             Method: post
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   GetBookingsFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-get-bookings-${Stage}
       Runtime: nodejs22.x
@@ -581,15 +587,15 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /bookings
             Method: get
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   UpdateSlotStatusFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Target: node22
+        Minify: false
+        Sourcemap: true
     Properties:
       FunctionName: !Sub accra-hospital-update-slot-status-${Stage}
       Runtime: nodejs22.x
@@ -608,12 +614,6 @@ Resources:
             RestApiId: !Ref ApiGatewayRestApi
             Path: /slots/{slotId}/status
             Method: patch
-      Metadata:
-        BuildMethod: esbuild
-        BuildProperties:
-          Target: node22
-          Minify: false
-          Sourcemap: true
 
   FrontendBucket:
     Type: AWS::S3::Bucket
@@ -671,8 +671,6 @@ Resources:
             DomainName: !Sub ${FrontendBucket}.s3-website.${AWS::Region}.amazonaws.com
             CustomOriginConfig:
               OriginProtocolPolicy: https-only
-              HttpPort: 80
-              HttpsPort: 443
         DefaultCacheBehavior:
           TargetOriginId: FrontendS3Origin
           ViewerProtocolPolicy: redirect-to-https
