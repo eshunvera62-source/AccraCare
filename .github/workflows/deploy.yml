@@ -14,9 +14,30 @@ env:
   STACK_NAME: accra-hospital-capstone
 
 jobs:
+  test:
+    name: Run Python unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install boto3
+
+      - name: Run Lambda handler tests
+        run: python -m pytest backend/ -v --tb=short
+
+      - name: Run seed tests
+        working-directory: backend/seed
+        run: python -m unittest discover -v
+
   build_and_deploy:
     name: SAM build and deploy (backend infrastructure)
     runs-on: ubuntu-latest
+    needs: test
     outputs:
       api_base_url: ${{ steps.stack_outputs.outputs.api_base_url }}
       frontend_bucket_name: ${{ steps.stack_outputs.outputs.frontend_bucket_name }}
