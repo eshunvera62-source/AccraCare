@@ -43,7 +43,7 @@ Resources:
         AllowMethods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
         AllowOrigin: "'*'"
-        MaxAge: 600
+        MaxAge: "'600'"
       AccessLogSetting:
         DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
         Format: >-
@@ -402,7 +402,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGatewayRestApi
-            Path: /appointments/{email}
+            Path: /appointments/{id}
             Method: get
 
   DeleteAppointmentFunction:
@@ -670,7 +670,7 @@ Resources:
           - Id: FrontendS3Origin
             DomainName: !Sub ${FrontendBucket}.s3-website.${AWS::Region}.amazonaws.com
             CustomOriginConfig:
-              OriginProtocolPolicy: https-only
+              OriginProtocolPolicy: http-only
         DefaultCacheBehavior:
           TargetOriginId: FrontendS3Origin
           ViewerProtocolPolicy: redirect-to-https
