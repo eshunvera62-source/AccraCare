@@ -53,6 +53,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Install Node.js dependencies
+        run: npm install
+        working-directory: backend/src
+
       - name: SAM validate
         run: sam validate --lint
 
