@@ -3,8 +3,8 @@
  * Data Access Layer for Accra Hospital Appointment Booking Platform.
  *
  * Talks to the deployed API Gateway + Lambda + DynamoDB backend.
- * Fill in API_BASE_URL below with the "api_base_url" Terraform output
- * once you have run `terraform apply` (see: terraform output api_base_url).
+ * Fill in API_BASE_URL below with the `ApiBaseUrl` SAM stack output
+ * after deployment, or allow CI to inject it automatically.
  * It looks like:
  *   https://abcd123456.execute-api.us-east-1.amazonaws.com/dev
  */
