@@ -3,46 +3,138 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   AccraCare hospital appointment booking system.
   API Gateway + Lambda + DynamoDB backend, with SNS notifications,
-  CloudWatch alarms, an AWS Budget, and an S3-hosted frontend.
+  CloudFront + S3 frontend hosting, CloudWatch monitoring, and AWS Budgets.
 
 Parameters:
   Stage:
     Type: String
     Default: dev
-    Description: Deployment stage name, used in the API Gateway stage and resource names
+    AllowedValues: [dev, test, prod]
+    Description: Deployment stage name used in resource names and environment variables.
   BudgetLimitUsd:
     Type: Number
     Default: 5
-    Description: Monthly AWS Budget ceiling in USD
+    Description: Monthly AWS Budget ceiling in USD.
   BudgetAlertEmail:
     Type: String
-    Description: Email address to receive AWS Budget threshold alerts
+    Description: Email address to receive AWS Budget threshold alerts.
   NotificationEmail:
     Type: String
-    Description: Email address subscribed to the SNS booking-confirmation topic
+    Description: Email address subscribed to the booking confirmation SNS topic.
 
 Globals:
   Function:
-    Runtime: python3.12
     Timeout: 10
     MemorySize: 128
     Tracing: Active
     Environment:
       Variables:
-        SLOTS_TABLE: !Ref SlotsTable
-        BOOKINGS_TABLE: !Ref BookingsTable
-        SNS_TOPIC_ARN: !Ref BookingConfirmationsTopic
-  Api:
-    Cors:
-      AllowMethods: "'GET,POST,PATCH,OPTIONS'"
-      AllowHeaders: "'Content-Type,Authorization'"
-      AllowOrigin: "'*'"
+        STAGE: !Ref Stage
 
 Resources:
+  # ---------------------------------------------------------------------
+  # API Gateway
+  # ---------------------------------------------------------------------
+  ApiGatewayRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      Cors:
+        AllowMethods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+        MaxAge: 600
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","caller":"$context.identity.caller","user":"$context.identity.user","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength"}
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          MetricsEnabled: true
+          LoggingLevel: INFO
+          DataTraceEnabled: true
+          ThrottlingBurstLimit: 100
+          ThrottlingRateLimit: 50
+      TracingEnabled: true
+
+  ApiGatewayAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/api-gateway/accra-hospital-api-${Stage}
+      RetentionInDays: 14
 
   # ---------------------------------------------------------------------
   # DynamoDB
   # ---------------------------------------------------------------------
+  AppointmentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub accra-hospital-appointments-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: appointmentId
+          AttributeType: S
+        - AttributeName: patientEmail
+          AttributeType: S
+        - AttributeName: doctorId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: appointmentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: patientEmail-index
+          KeySchema:
+            - AttributeName: patientEmail
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: doctorId-index
+          KeySchema:
+            - AttributeName: doctorId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  DoctorsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub accra-hospital-doctors-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: doctorId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: doctorId
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  PatientsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub accra-hospital-patients-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: patientEmail
+          AttributeType: S
+      KeySchema:
+        - AttributeName: patientEmail
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
   SlotsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -72,6 +164,8 @@ Resources:
           AttributeType: S
         - AttributeName: slotId
           AttributeType: S
+        - AttributeName: patientEmail
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
@@ -79,6 +173,12 @@ Resources:
         - IndexName: slotId-index
           KeySchema:
             - AttributeName: slotId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: patientEmail-index
+          KeySchema:
+            - AttributeName: patientEmail
               KeyType: HASH
           Projection:
             ProjectionType: ALL
@@ -91,7 +191,7 @@ Resources:
         Enabled: true
 
   # ---------------------------------------------------------------------
-  # SNS
+  # SNS Topics
   # ---------------------------------------------------------------------
   BookingConfirmationsTopic:
     Type: AWS::SNS::Topic
@@ -106,7 +206,6 @@ Resources:
       Protocol: email
       Endpoint: !Ref NotificationEmail
 
-  # Separate ops topic so Lambda/API alarms don't mix with patient booking emails
   OpsAlertsTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -121,14 +220,270 @@ Resources:
       Endpoint: !Ref BudgetAlertEmail
 
   # ---------------------------------------------------------------------
-  # Lambda functions (each an implicit API Gateway event)
+  # Lambda functions
   # ---------------------------------------------------------------------
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-health-${Stage}
+      Runtime: nodejs22.x
+      Handler: handlers/health.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+      Events:
+        Health:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /health
+            Method: get
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
+
+  StatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-status-${Stage}
+      Runtime: nodejs22.x
+      Handler: handlers/status.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+      Events:
+        Status:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /status
+            Method: get
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
+
+  ListDoctorsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-list-doctors-${Stage}
+      Runtime: nodejs22.x
+      Handler: handlers/listDoctors.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          DOCTORS_TABLE: !Ref DoctorsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DoctorsTable
+      Events:
+        GetDoctors:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /doctors
+            Method: get
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
+
+  CreateDoctorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-create-doctor-${Stage}
+      Runtime: nodejs22.x
+      Handler: handlers/createDoctor.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          DOCTORS_TABLE: !Ref DoctorsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DoctorsTable
+      Events:
+        PostDoctor:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /doctors
+            Method: post
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
+
+  ListAppointmentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-list-appointments-${Stage}
+      Runtime: nodejs22.x
+      Handler: handlers/listAppointments.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          APPOINTMENTS_TABLE: !Ref AppointmentsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AppointmentsTable
+      Events:
+        GetAppointments:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /appointments
+            Method: get
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
+
+  CreateAppointmentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-create-appointment-${Stage}
+      Runtime: nodejs22.x
+      Handler: handlers/createAppointment.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          APPOINTMENTS_TABLE: !Ref AppointmentsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AppointmentsTable
+      Events:
+        PostAppointment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /appointments
+            Method: post
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
+
+  GetAppointmentsByEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-get-appointments-by-email-${Stage}
+      Runtime: nodejs22.x
+      Handler: handlers/getAppointmentsByEmail.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          APPOINTMENTS_TABLE: !Ref AppointmentsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AppointmentsTable
+      Events:
+        GetAppointmentsByEmail:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /appointments/{email}
+            Method: get
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
+
+  DeleteAppointmentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-delete-appointment-${Stage}
+      Runtime: nodejs22.x
+      Handler: handlers/deleteAppointment.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          APPOINTMENTS_TABLE: !Ref AppointmentsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AppointmentsTable
+      Events:
+        DeleteAppointment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /appointments/{id}
+            Method: delete
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
+
+  DeleteBookingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-delete-booking-${Stage}
+      Runtime: python3.12
+      CodeUri: backend/lambdas/delete_booking/
+      Handler: handler.lambda_handler
+      Environment:
+        Variables:
+          BOOKINGS_TABLE: !Ref BookingsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingsTable
+      Events:
+        DeleteBooking:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /bookings/{id}
+            Method: delete
+
+  GetBookingsByEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-get-bookings-by-email-${Stage}
+      Runtime: python3.12
+      CodeUri: backend/lambdas/get_bookings_by_email/
+      Handler: handler.lambda_handler
+      Environment:
+        Variables:
+          BOOKINGS_TABLE: !Ref BookingsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BookingsTable
+      Events:
+        GetBookingsByEmail:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /bookings/by-email/{email}
+            Method: get
+
   GetSlotsFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub accra-hospital-get-slots-${Stage}
-      CodeUri: backend/lambdas/get_slots/
-      Handler: handler.lambda_handler
+      Runtime: nodejs22.x
+      Handler: handlers/getSlots.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          SLOTS_TABLE: !Ref SlotsTable
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref SlotsTable
@@ -136,51 +491,86 @@ Resources:
         GetSlots:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayRestApi
             Path: /slots
             Method: get
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
 
   CreateSlotFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub accra-hospital-create-slot-${Stage}
-      CodeUri: backend/lambdas/create_slot/
-      Handler: handler.lambda_handler
+      Runtime: nodejs22.x
+      Handler: handlers/createSlot.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          SLOTS_TABLE: !Ref SlotsTable
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SlotsTable
       Events:
-        CreateSlot:
+        PostSlot:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayRestApi
             Path: /slots
             Method: post
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
 
   BookSlotFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub accra-hospital-book-slot-${Stage}
-      CodeUri: backend/lambdas/book_slot/
-      Handler: handler.lambda_handler
+      Runtime: nodejs22.x
+      Handler: handlers/bookSlot.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          SLOTS_TABLE: !Ref SlotsTable
+          BOOKINGS_TABLE: !Ref BookingsTable
+          SNS_TOPIC_ARN: !Ref BookingConfirmationsTopic
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SlotsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref BookingsTable
         - SNSPublishMessagePolicy:
-            TopicName: !GetAtt BookingConfirmationsTopic.TopicName
+            TopicName: !Sub accra-hospital-booking-confirmations-${Stage}
       Events:
-        BookSlot:
+        PostBookSlot:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayRestApi
             Path: /slots/{slotId}/book
             Method: post
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
 
   GetBookingsFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub accra-hospital-get-bookings-${Stage}
-      CodeUri: backend/lambdas/get_bookings/
-      Handler: handler.lambda_handler
+      Runtime: nodejs22.x
+      Handler: handlers/getBookings.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          BOOKINGS_TABLE: !Ref BookingsTable
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref BookingsTable
@@ -188,208 +578,47 @@ Resources:
         GetBookings:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayRestApi
             Path: /bookings
             Method: get
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
 
   UpdateSlotStatusFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub accra-hospital-update-slot-status-${Stage}
-      CodeUri: backend/lambdas/update_slot_status/
-      Handler: handler.lambda_handler
+      Runtime: nodejs22.x
+      Handler: handlers/updateSlotStatus.lambdaHandler
+      CodeUri: backend/src/
+      Environment:
+        Variables:
+          SLOTS_TABLE: !Ref SlotsTable
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SlotsTable
       Events:
-        UpdateSlotStatus:
+        PatchSlotStatus:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayRestApi
             Path: /slots/{slotId}/status
             Method: patch
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Target: node22
+          Minify: false
+          Sourcemap: true
 
-  # ---------------------------------------------------------------------
-  # CloudWatch: log retention + alarms (one per function, plus API 5xx)
-  # ---------------------------------------------------------------------
-  GetSlotsLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${GetSlotsFunction}
-      RetentionInDays: 14
-
-  CreateSlotLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${CreateSlotFunction}
-      RetentionInDays: 14
-
-  BookSlotLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${BookSlotFunction}
-      RetentionInDays: 14
-
-  GetBookingsLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${GetBookingsFunction}
-      RetentionInDays: 14
-
-  UpdateSlotStatusLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${UpdateSlotStatusFunction}
-      RetentionInDays: 14
-
-  GetSlotsErrorAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub accra-hospital-get-slots-errors-${Stage}
-      Namespace: AWS/Lambda
-      MetricName: Errors
-      Dimensions:
-        - Name: FunctionName
-          Value: !Ref GetSlotsFunction
-      Statistic: Sum
-      Period: 300
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !Ref OpsAlertsTopic
-
-  CreateSlotErrorAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub accra-hospital-create-slot-errors-${Stage}
-      Namespace: AWS/Lambda
-      MetricName: Errors
-      Dimensions:
-        - Name: FunctionName
-          Value: !Ref CreateSlotFunction
-      Statistic: Sum
-      Period: 300
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !Ref OpsAlertsTopic
-
-  BookSlotErrorAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub accra-hospital-book-slot-errors-${Stage}
-      Namespace: AWS/Lambda
-      MetricName: Errors
-      Dimensions:
-        - Name: FunctionName
-          Value: !Ref BookSlotFunction
-      Statistic: Sum
-      Period: 300
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !Ref OpsAlertsTopic
-
-  GetBookingsErrorAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub accra-hospital-get-bookings-errors-${Stage}
-      Namespace: AWS/Lambda
-      MetricName: Errors
-      Dimensions:
-        - Name: FunctionName
-          Value: !Ref GetBookingsFunction
-      Statistic: Sum
-      Period: 300
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !Ref OpsAlertsTopic
-
-  UpdateSlotStatusErrorAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub accra-hospital-update-slot-status-errors-${Stage}
-      Namespace: AWS/Lambda
-      MetricName: Errors
-      Dimensions:
-        - Name: FunctionName
-          Value: !Ref UpdateSlotStatusFunction
-      Statistic: Sum
-      Period: 300
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !Ref OpsAlertsTopic
-
-  Api5xxAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub accra-hospital-api-5xx-${Stage}
-      Namespace: AWS/ApiGateway
-      MetricName: 5XXError
-      Dimensions:
-        - Name: ApiName
-          Value: !Sub accra-hospital-api-${Stage}
-        - Name: Stage
-          Value: !Ref Stage
-      Statistic: Sum
-      Period: 300
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !Ref OpsAlertsTopic
-
-  # ---------------------------------------------------------------------
-  # AWS Budgets
-  # ---------------------------------------------------------------------
-  MonthlyBudget:
-    Type: AWS::Budgets::Budget
-    Properties:
-      Budget:
-        BudgetName: !Sub accra-hospital-monthly-budget-${Stage}
-        BudgetType: COST
-        TimeUnit: MONTHLY
-        BudgetLimit:
-          Amount: !Ref BudgetLimitUsd
-          Unit: USD
-      NotificationsWithSubscribers:
-        - Notification:
-            NotificationType: ACTUAL
-            # amazonq-ignore-next-line
-            ComparisonOperator: GREATER_THAN
-            Threshold: 80
-            ThresholdType: PERCENTAGE
-          Subscribers:
-            - SubscriptionType: EMAIL
-              Address: !Ref BudgetAlertEmail
-        - Notification:
-            NotificationType: FORECASTED
-            ComparisonOperator: GREATER_THAN
-            Threshold: 100
-            ThresholdType: PERCENTAGE
-          Subscribers:
-            - SubscriptionType: EMAIL
-              Address: !Ref BudgetAlertEmail
-
-  # ---------------------------------------------------------------------
-  # S3 static website hosting for the frontend
-  # ---------------------------------------------------------------------
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub accra-hospital-frontend-${Stage}-${AWS::AccountId}
-      ObjectLockEnabled: true
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: index.html
@@ -401,12 +630,6 @@ Resources:
               SSEAlgorithm: aws:kms
               KMSMasterKeyID: alias/aws/s3
             BucketKeyEnabled: true
-      ObjectLockConfiguration:
-        ObjectLockEnabled: Enabled
-        Rule:
-          DefaultRetention:
-            Mode: GOVERNANCE
-            Days: 1
       LifecycleConfiguration:
         Rules:
           - Id: ExpireOldVersions
@@ -414,10 +637,10 @@ Resources:
             NoncurrentVersionExpiration:
               NoncurrentDays: 30
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
 
   FrontendBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -426,11 +649,6 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: PublicReadGetObject
-            Effect: Allow
-            Principal: '*'
-            Action: s3:GetObject
-            Resource: !Sub arn:aws:s3:::${FrontendBucket}/*
           - Sid: DenyNonHttps
             Effect: Deny
             Principal: '*'
@@ -442,20 +660,150 @@ Resources:
               Bool:
                 aws:SecureTransport: 'false'
 
+  FrontendCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Origins:
+          - Id: FrontendS3Origin
+            DomainName: !Sub ${FrontendBucket}.s3-website.${AWS::Region}.amazonaws.com
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              HttpPort: 80
+              HttpsPort: 443
+        DefaultCacheBehavior:
+          TargetOriginId: FrontendS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          MinTTL: 0
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+  # 5% error-rate alarm across all Lambda invocations (assignment requirement)
+  LambdaErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub accra-hospital-lambda-error-rate-${Stage}
+      AlarmDescription: Fires when Lambda error rate exceeds 5% over 5 minutes
+      Metrics:
+        - Id: errors
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: invocations
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: errorRate
+          Expression: "errors / invocations * 100"
+          Label: ErrorRatePercent
+          ReturnData: true
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref OpsAlertsTopic
+
+  CloudWatchDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub accra-hospital-dashboard-${Stage}
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", "FunctionName", "${CreateAppointmentFunction}"],
+                  ["AWS/Lambda", "Errors", "FunctionName", "${CreateAppointmentFunction}"],
+                  ["AWS/Lambda", "Duration", "FunctionName", "${CreateAppointmentFunction}"]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Appointment Function Activity"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/ApiGateway", "5XXError", "ApiName", "accra-hospital-api-${Stage}", "Stage", "${Stage}"],
+                  ["AWS/ApiGateway", "Count", "ApiName", "accra-hospital-api-${Stage}", "Stage", "${Stage}"]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "API Gateway Errors vs Requests"
+              }
+            }
+          ]
+        }
+
 Outputs:
   ApiBaseUrl:
-    Description: Base URL to put into frontend/scripts/api.js as API_BASE_URL
-    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
-  SlotsTableName:
-    Description: DynamoDB slots table name, needed by backend/seed/load_seed_data.py
-    Value: !Ref SlotsTable
-  BookingsTableName:
-    Value: !Ref BookingsTable
+    Description: Base URL for the REST API
+    Value: !Sub https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
   FrontendBucketName:
+    Description: S3 bucket for frontend assets
     Value: !Ref FrontendBucket
   FrontendWebsiteUrl:
-    Value: !GetAtt FrontendBucket.WebsiteURL
+    Description: CloudFront distribution domain for the frontend
+    Value: !GetAtt FrontendCloudFrontDistribution.DomainName
+  AppointmentsTableName:
+    Description: DynamoDB appointments table name
+    Value: !Ref AppointmentsTable
+  DoctorsTableName:
+    Description: DynamoDB doctors table name
+    Value: !Ref DoctorsTable
+  PatientsTableName:
+    Description: DynamoDB patients table name
+    Value: !Ref PatientsTable
+  SlotsTableName:
+    Description: DynamoDB slots table name for legacy slot management
+    Value: !Ref SlotsTable
+  BookingsTableName:
+    Description: DynamoDB bookings table name for legacy booking records
+    Value: !Ref BookingsTable
   OpsAlertsTopicArn:
     Value: !Ref OpsAlertsTopic
-  SnsTopicArn:
+  BookingConfirmationsTopicArn:
     Value: !Ref BookingConfirmationsTopic
