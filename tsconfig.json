@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "rootDir": "./backend/src",
+    "types": ["node", "jest"]
+  },
+  "include": ["backend/src/**/*", "backend/tests/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

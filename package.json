@@ -1,0 +1,37 @@
+{
+  "name": "accra-hospital-capstone",
+  "version": "1.0.0",
+  "description": "AccraCare serverless hospital appointment booking system",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write .",
+    "test": "jest --coverage",
+    "sam:validate": "sam validate --lint",
+    "sam:build": "sam build"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.375.0",
+    "@aws-sdk/lib-dynamodb": "^3.375.0",
+    "@aws-sdk/client-sns": "^3.375.0",
+    "uuid": "^9.0.0",
+    "zod": "^3.22.2"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.119",
+    "@types/jest": "^29.5.5",
+    "@types/node": "^20.14.3",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "^2.29.4",
+    "esbuild": "^0.19.5",
+    "jest": "^29.7.0",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.6.0"
+  }
+}
