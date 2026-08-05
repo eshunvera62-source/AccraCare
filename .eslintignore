@@ -1,6 +1,6 @@
-node_modules
-.aws-sam
-dist
-coverage
 .venv
 venv
+node_modules
+dist
+.aws-sam
+coverage
