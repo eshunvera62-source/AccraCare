@@ -31,7 +31,8 @@ try {
 }
 
 async function apiFetch(path, options = {}) {
-  const url = new URL(path, API_BASE_URL + "/");
+  const base = API_BASE_URL.endsWith('/') ? API_BASE_URL : API_BASE_URL + '/';
+  const url = new URL(path.startsWith('/') ? path.slice(1) : path, base);
   if (!url.href.startsWith(API_BASE_URL)) {
     throw new Error(`Blocked request to disallowed URL: ${url.href}`);
   }
