@@ -649,9 +649,7 @@ Resources:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
-              SSEAlgorithm: aws:kms
-              KMSMasterKeyID: alias/aws/s3
-            BucketKeyEnabled: true
+              SSEAlgorithm: AES256
       LifecycleConfiguration:
         Rules:
           - Id: ExpireOldVersions
