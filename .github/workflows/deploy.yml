@@ -149,4 +149,4 @@ jobs:
 
       - name: Sync to S3
         run: |
-          aws s3 sync frontend/ "s3://${{ needs.build_and_deploy.outputs.frontend_bucket_name }}" --delete
+          aws s3 cp frontend/ "s3://${{ needs.build_and_deploy.outputs.frontend_bucket_name }}/" --recursive --sse AES256 --delete
