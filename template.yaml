@@ -669,16 +669,11 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: DenyNonHttps
-            Effect: Deny
+          - Sid: PublicReadGetObject
+            Effect: Allow
             Principal: '*'
-            Action: s3:*
-            Resource:
-              - !Sub arn:aws:s3:::${FrontendBucket}
-              - !Sub arn:aws:s3:::${FrontendBucket}/*
-            Condition:
-              Bool:
-                aws:SecureTransport: 'false'
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${FrontendBucket}/*
 
   FrontendCloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
