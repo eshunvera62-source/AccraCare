@@ -801,6 +801,9 @@ Outputs:
   FrontendWebsiteUrl:
     Description: CloudFront distribution domain for the frontend
     Value: !GetAtt FrontendCloudFrontDistribution.DomainName
+  FrontendDistributionId:
+    Description: CloudFront distribution ID for cache invalidation
+    Value: !Ref FrontendCloudFrontDistribution
   AppointmentsTableName:
     Description: DynamoDB appointments table name
     Value: !Ref AppointmentsTable
