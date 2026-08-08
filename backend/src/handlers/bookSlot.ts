@@ -6,14 +6,13 @@ import { jsonResponse, errorResponse } from '../utils/response.js';
 import { dynamoClient } from '../utils/dynamo.js';
 
 const pathSchema = z.object({
-  slotId: z.string().regex(/^[\w\-]{1,64}$/)
+  slotId: z.string().regex(/^[\w\-]{1,64}$/),
 });
 
 const payloadSchema = z.object({
   name: z.string().min(1).max(200),
   phone: z.string().min(1).max(50),
   email: z.string().email().max(200).optional(),
-  simulateSlotFullError: z.boolean().optional()
 });
 
 const snsClient = new SNSClient({});
@@ -32,27 +31,18 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
     const body = payloadSchema.parse(JSON.parse(event.body ?? '{}'));
     const slotId = pathParameters.slotId;
 
-    if (body.simulateSlotFullError) {
-      const currentSlot = await dynamoClient.send(
-        new GetCommand({ TableName: slotsTable, Key: { id: slotId } })
-      );
-      if (!currentSlot.Item) {
-        return jsonResponse(404, { success: false, error: 'The requested appointment slot was not found.' });
-      }
-      return jsonResponse(409, { success: false, error: 'SLOT_JUST_FILLED', updatedSlot: currentSlot.Item });
-    }
-
     let updatedSlot = (
       await dynamoClient.send(
         new UpdateCommand({
           TableName: slotsTable,
           Key: { id: slotId },
-          UpdateExpression: 'SET availableSeats = availableSeats - :one, #s = if_not_exists(#s, :avail)',
+          UpdateExpression:
+            'SET availableSeats = availableSeats - :one, #s = if_not_exists(#s, :avail)',
           ConditionExpression: 'attribute_exists(id) AND availableSeats > :zero',
           ExpressionAttributeNames: { '#s': 'status' },
           ExpressionAttributeValues: { ':one': 1, ':zero': 0, ':avail': 'available' },
-          ReturnValues: 'ALL_NEW'
-        })
+          ReturnValues: 'ALL_NEW',
+        }),
       )
     ).Attributes as Record<string, unknown>;
 
@@ -65,8 +55,8 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
             UpdateExpression: 'SET #s = :full',
             ExpressionAttributeNames: { '#s': 'status' },
             ExpressionAttributeValues: { ':full': 'full' },
-            ReturnValues: 'ALL_NEW'
-          })
+            ReturnValues: 'ALL_NEW',
+          }),
         )
       ).Attributes as Record<string, unknown>;
     }
@@ -81,15 +71,15 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
       patientEmail: body.email ?? '',
       bookedAt: Date.now(),
       ttl: Math.floor(Date.now() / 1000) + 365 * 24 * 3600,
-      status: 'confirmed'
+      status: 'confirmed',
     };
 
     await dynamoClient.send(
       new PutCommand({
         TableName: bookingsTable,
         Item: booking,
-        ConditionExpression: 'attribute_not_exists(id)'
-      })
+        ConditionExpression: 'attribute_not_exists(id)',
+      }),
     );
 
     if (snsTopicArn) {
@@ -98,8 +88,8 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
           new PublishCommand({
             TopicArn: snsTopicArn,
             Subject: 'AccraCare booking confirmed',
-            Message: `Booking confirmed for ${booking.patientName} on slot ${slotId}. Confirmation: ${confirmationCode}.`
-          })
+            Message: `Booking confirmed for ${booking.patientName} on slot ${slotId}. Confirmation: ${confirmationCode}.`,
+          }),
         );
       } catch {
         // Do not block a successful booking on notification failure.
@@ -109,17 +99,24 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
     return jsonResponse(200, { success: true, booking, updatedSlot });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return jsonResponse(400, { success: false, error: 'Invalid booking payload', details: error.issues });
+      return jsonResponse(400, {
+        success: false,
+        error: 'Invalid booking payload',
+        details: error.issues,
+      });
     }
 
     if ((error as Error).name === 'ConditionalCheckFailedException') {
       const currentSlot = await dynamoClient.send(
-        new GetCommand({ TableName: process.env.SLOTS_TABLE ?? '', Key: { id: event.pathParameters?.slotId } })
+        new GetCommand({
+          TableName: process.env.SLOTS_TABLE ?? '',
+          Key: { id: event.pathParameters?.slotId },
+        }),
       );
       return jsonResponse(409, {
         success: false,
         error: 'SLOT_JUST_FILLED',
-        updatedSlot: currentSlot.Item ?? null
+        updatedSlot: currentSlot.Item ?? null,
       });
     }
 

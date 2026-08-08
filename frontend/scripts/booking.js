@@ -1,6 +1,6 @@
 /**
  * booking.js
- * Manages the appointment booking modal, form validation, success receipts, and race-condition handling.
+ * Manages the appointment booking modal, form validation, success receipts, and capacity handling.
  */
 
 import { bookSlot } from './api.js';
@@ -32,10 +32,15 @@ function renderModalForm() {
   if (!container || !activeSlot) return;
 
   const formattedDate = new Date(activeSlot.dateTime).toLocaleDateString('en-GB', {
-    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
   const formattedTime = new Date(activeSlot.dateTime).toLocaleTimeString('en-US', {
-    hour: '2-digit', minute: '2-digit', hour12: true
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
   });
 
   // Static skeleton — slot name/doctor set via textContent after, never innerHTML
@@ -70,13 +75,6 @@ function renderModalForm() {
         <input type="email" id="patient-email" class="form-control" placeholder="e.g. kwame.mensah@example.com" />
       </div>
 
-      <div style="margin-bottom: 1.25rem; padding: 0.65rem; background: var(--bg-subtle); border-radius: 6px; font-size: 0.75rem; color: var(--text-muted);">
-        <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
-          <input type="checkbox" id="simulate-full-chk" style="margin-top: 0.15rem;" />
-          <span><strong>System Concurrency Test:</strong> Simulate "Slot just became full" capacity error on submit.</span>
-        </label>
-      </div>
-
       <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
         <button type="button" id="cancel-booking-btn" class="btn btn-outline" style="flex: 1; border-radius: 8px;">Cancel</button>
         <button type="submit" id="submit-booking-btn" class="btn btn-primary" style="flex: 2; border-radius: 8px;">Confirm & Send SMS</button>
@@ -86,7 +84,8 @@ function renderModalForm() {
 
   // Set dynamic slot info via textContent — never parsed as HTML
   document.getElementById('modal-hospital-name').textContent = activeSlot.hospitalName;
-  document.getElementById('modal-doctor-dept').textContent = `${activeSlot.doctorName} • ${activeSlot.department}`;
+  document.getElementById('modal-doctor-dept').textContent =
+    `${activeSlot.doctorName} • ${activeSlot.department}`;
 
   document.getElementById('close-modal-btn')?.addEventListener('click', closeBookingModal);
   document.getElementById('cancel-booking-btn')?.addEventListener('click', closeBookingModal);
@@ -101,7 +100,6 @@ async function handleFormSubmit(e) {
   const nameInput = document.getElementById('patient-name');
   const phoneInput = document.getElementById('patient-phone');
   const emailInput = document.getElementById('patient-email');
-  const simulateChk = document.getElementById('simulate-full-chk');
   const nameError = document.getElementById('name-error');
   const phoneError = document.getElementById('phone-error');
 
@@ -111,31 +109,39 @@ async function handleFormSubmit(e) {
   const nameVal = nameInput ? nameInput.value.trim() : '';
   const phoneVal = phoneInput ? phoneInput.value.trim() : '';
   const emailVal = emailInput ? emailInput.value.trim() : '';
-  const simulateFull = simulateChk ? simulateChk.checked : false;
 
   let isValid = true;
   if (!nameVal) {
-    if (nameError) { nameError.textContent = 'Please enter patient name.'; nameError.style.display = 'block'; }
+    if (nameError) {
+      nameError.textContent = 'Please enter patient name.';
+      nameError.style.display = 'block';
+    }
     isValid = false;
   }
   if (!phoneVal) {
-    if (phoneError) { phoneError.textContent = 'Phone number is required for SMS confirmation.'; phoneError.style.display = 'block'; }
+    if (phoneError) {
+      phoneError.textContent = 'Phone number is required for SMS confirmation.';
+      phoneError.style.display = 'block';
+    }
     isValid = false;
   } else if (!validateGhanaPhone(phoneVal)) {
-    if (phoneError) { phoneError.textContent = 'Please enter a valid Ghana phone number (e.g. 024 123 4567 or +233 24 123 4567).'; phoneError.style.display = 'block'; }
+    if (phoneError) {
+      phoneError.textContent =
+        'Please enter a valid Ghana phone number (e.g. 024 123 4567 or +233 24 123 4567).';
+      phoneError.style.display = 'block';
+    }
     isValid = false;
   }
 
   if (!isValid) return;
 
   const submitBtn = document.getElementById('submit-booking-btn');
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Processing...'; }
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+  }
 
-  const res = await bookSlot(
-    activeSlot.id,
-    { name: nameVal, phone: phoneVal, email: emailVal },
-    { simulateSlotFullError: simulateFull }
-  );
+  const res = await bookSlot(activeSlot.id, { name: nameVal, phone: phoneVal, email: emailVal });
 
   if (res.success && res.booking) {
     renderSuccessState(res.booking);
@@ -144,8 +150,14 @@ async function handleFormSubmit(e) {
     renderSlotFullErrorState(res.updatedSlot);
     if (onSlotFullCallback) onSlotFullCallback(res.updatedSlot);
   } else {
-    if (phoneError) { phoneError.textContent = res.error || 'Failed to complete booking. Please try again.'; phoneError.style.display = 'block'; }
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm & Send SMS'; }
+    if (phoneError) {
+      phoneError.textContent = res.error || 'Failed to complete booking. Please try again.';
+      phoneError.style.display = 'block';
+    }
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Confirm & Send SMS';
+    }
   }
 }
 
@@ -219,7 +231,7 @@ function downloadICalendarFile(booking, slot) {
     `LOCATION:${slot.hospitalName}, ${slot.area}`,
     'STATUS:CONFIRMED',
     'END:VEVENT',
-    'END:VCALENDAR'
+    'END:VCALENDAR',
   ];
 
   const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
