@@ -5,19 +5,19 @@ import { dynamoClient } from '../utils/dynamo.js';
 import { z } from 'zod';
 
 const paramsSchema = z.object({
-  id: z.string().email().max(200)
+  email: z.string().email().max(200)
 });
 
 export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
-    const pathParameters = paramsSchema.parse({ id: event.pathParameters?.id });
+    const pathParameters = paramsSchema.parse({ email: event.pathParameters?.email });
 
     const result = await dynamoClient.send(
       new QueryCommand({
         TableName: process.env.APPOINTMENTS_TABLE ?? '',
         IndexName: 'patientEmail-index',
         KeyConditionExpression: 'patientEmail = :email',
-        ExpressionAttributeValues: { ':email': pathParameters.id }
+        ExpressionAttributeValues: { ':email': pathParameters.email }
       })
     );
 
