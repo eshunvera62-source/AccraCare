@@ -8,6 +8,12 @@ __pycache__/
 .venv/
 venv/
 
+# TypeScript build output
+dist/
+
+# Accidental nested git repo (duplicate README only)
+AccraCare/
+
 # OS
 .DS_Store
 node_modules

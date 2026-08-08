@@ -17,11 +17,11 @@ def load_handler(module_name, relative_path):
     return module
 
 
-GET_SLOTS_HANDLER = load_handler("get_slots_handler", "backend/lambdas/get_slots/handler.py")
-CREATE_SLOT_HANDLER = load_handler("create_slot_handler", "backend/lambdas/create_slot/handler.py")
-BOOK_SLOT_HANDLER = load_handler("book_slot_handler", "backend/lambdas/book_slot/handler.py")
-GET_BOOKINGS_HANDLER = load_handler("get_bookings_handler", "backend/lambdas/get_bookings/handler.py")
-UPDATE_SLOT_STATUS_HANDLER = load_handler("update_slot_status_handler", "backend/lambdas/update_slot_status/handler.py")
+GET_SLOTS_HANDLER = load_handler("get_slots_handler", "backend/local_handlers/get_slots/handler.py")
+CREATE_SLOT_HANDLER = load_handler("create_slot_handler", "backend/local_handlers/create_slot/handler.py")
+BOOK_SLOT_HANDLER = load_handler("book_slot_handler", "backend/local_handlers/book_slot/handler.py")
+GET_BOOKINGS_HANDLER = load_handler("get_bookings_handler", "backend/local_handlers/get_bookings/handler.py")
+UPDATE_SLOT_STATUS_HANDLER = load_handler("update_slot_status_handler", "backend/local_handlers/update_slot_status/handler.py")
 
 
 class LocalApiHandler(BaseHTTPRequestHandler):

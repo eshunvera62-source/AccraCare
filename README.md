@@ -65,14 +65,19 @@ accra-hospital-capstone/
 ├── frontend/                            # Static website (index.html, admin.html)
 │   └── scripts/api.js                   # Calls the real API Gateway URL
 ├── backend/
-│   ├── lambdas/                         # Python 3.12 Lambda handlers
+│   ├── src/                             # TypeScript Lambda handlers (deployed, Node 22)
+│   │   ├── handlers/                    #   health, status, slots, bookings, doctors, appointments
+│   │   └── utils/                       #   dynamo client + response helpers
+│   ├── lambdas/                         # Python 3.12 Lambda handlers (deployed)
+│   │   ├── get_bookings_by_email/       #   GET /bookings/by-email/{email}
+│   │   └── delete_booking/              #   DELETE /bookings/{id}
+│   ├── local_handlers/                  # Python handlers used ONLY by local_api.py
 │   │   ├── get_slots/
 │   │   ├── create_slot/
 │   │   ├── book_slot/
 │   │   ├── get_bookings/
-│   │   ├── get_bookings_by_email/       # GET /bookings/by-email/{email}
-│   │   ├── delete_booking/             # DELETE /bookings/{id}
 │   │   └── update_slot_status/
+│   ├── local_api.py                     # Local dev server (http://127.0.0.1:3001)
 │   └── seed/                            # Seed data + unit tests
 │       ├── seed_slots.json
 │       ├── load_seed_data.py
