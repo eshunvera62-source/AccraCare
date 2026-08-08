@@ -69,21 +69,22 @@ accra-hospital-capstone/
 │   │   ├── handlers/                    #   health, status, slots, bookings, doctors, appointments
 │   │   └── utils/                       #   dynamo client + response helpers
 │   ├── lambdas/                         # Python 3.12 Lambda handlers (deployed)
-│   │   ├── get_bookings_by_email/       #   GET /bookings/by-email/{email}
-│   │   └── delete_booking/              #   DELETE /bookings/{id}
+│   │   ├── get_bookings_by_email.py     #   GET /bookings/by-email/{email}
+│   │   └── delete_booking.py            #   DELETE /bookings/{id}
 │   ├── local_handlers/                  # Python handlers used ONLY by local_api.py
-│   │   ├── get_slots/
-│   │   ├── create_slot/
-│   │   ├── book_slot/
-│   │   ├── get_bookings/
-│   │   └── update_slot_status/
+│   │   ├── get_slots.py
+│   │   ├── create_slot.py
+│   │   ├── book_slot.py
+│   │   ├── get_bookings.py
+│   │   └── update_slot_status.py
 │   ├── local_api.py                     # Local dev server (http://127.0.0.1:3001)
+│   ├── env.json                          # Local SAM environment variables
+│   ├── events/                           # Sample events for SAM local invocations
 │   └── seed/                            # Seed data + unit tests
 │       ├── seed_slots.json
 │       ├── load_seed_data.py
 │       ├── test_load_seed_data.py
 │       └── test_config_defaults.py
-└── events/                              # Sample events for sam local invoke
 ```
 
 ---
@@ -101,7 +102,6 @@ This section explains what every file and folder in the repository does.
 | `package.json` | Root Node.js project manifest. Defines scripts (`build`, `lint`, `format`, `test`, `sam:build`, `sam:validate`) and shared dev dependencies (TypeScript, ESLint, Prettier, Jest, esbuild). |
 | `package-lock.json` | Locks the exact versions of all npm dependencies for reproducible installs. |
 | `tsconfig.json` | Root TypeScript compiler config. Compiles `backend/src/**` to the `dist/` folder using `module: ES2022` and `moduleResolution: Bundler`. |
-| `env.json` | Local environment variables for `sam local invoke`/`sam local start-api`. Maps each function to its DynamoDB table names and region so handlers work locally without deploying. |
 | `.gitignore` | Files/folders Git should ignore: `node_modules`, `.venv`, `dist/`, `.aws-sam/`, `__pycache__/`, and the accidental nested `AccraCare/` repo. |
 | `.eslintrc.json` | ESLint configuration for the TypeScript handlers (using `@typescript-eslint`). Enforces no unused imports and warns on `console` usage. |
 | `.eslintignore` | Files ESLint should skip: `node_modules`, `dist`, `.venv`, `.aws-sam`, `coverage`. |
@@ -160,8 +160,8 @@ This section explains what every file and folder in the repository does.
 
 | Path | HTTP Endpoint | Purpose |
 |------|---------------|---------|
-| `backend/lambdas/get_bookings_by_email/handler.py` | `GET /bookings/by-email/{email}` | Returns all bookings for a patient email using the `patientEmail-index` GSI. Validates the email format. |
-| `backend/lambdas/delete_booking/handler.py` | `DELETE /bookings/{id}` | Cancels a booking. Validates the ID, checks it exists, then deletes with a conditional write. |
+| `backend/lambdas/get_bookings_by_email.py` | `GET /bookings/by-email/{email}` | Returns all bookings for a patient email using the `patientEmail-index` GSI. Validates the email format. |
+| `backend/lambdas/delete_booking.py` | `DELETE /bookings/{id}` | Cancels a booking. Validates the ID, checks it exists, then deletes with a conditional write. |
 
 ### `backend/local_handlers/` — Python handlers for local dev only
 
@@ -169,11 +169,11 @@ This section explains what every file and folder in the repository does.
 
 | Path | Simulated Endpoint | Purpose |
 |------|--------------------|---------|
-| `backend/local_handlers/get_slots/handler.py` | `GET /slots` | Lists slots (mirrors `getSlots.ts`). |
-| `backend/local_handlers/create_slot/handler.py` | `POST /slots` | Creates a slot (mirrors `createSlot.ts`). |
-| `backend/local_handlers/book_slot/handler.py` | `POST /slots/{slotId}/book` | Books a slot (mirrors `bookSlot.ts`). |
-| `backend/local_handlers/get_bookings/handler.py` | `GET /bookings` | Lists bookings (mirrors `getBookings.ts`). |
-| `backend/local_handlers/update_slot_status/handler.py` | `PATCH /slots/{slotId}/status` | Toggles slot status (mirrors `updateSlotStatus.ts`). |
+| `backend/local_handlers/get_slots.py` | `GET /slots` | Lists slots (mirrors `getSlots.ts`). |
+| `backend/local_handlers/create_slot.py` | `POST /slots` | Creates a slot (mirrors `createSlot.ts`). |
+| `backend/local_handlers/book_slot.py` | `POST /slots/{slotId}/book` | Books a slot (mirrors `bookSlot.ts`). |
+| `backend/local_handlers/get_bookings.py` | `GET /bookings` | Lists bookings (mirrors `getBookings.ts`). |
+| `backend/local_handlers/update_slot_status.py` | `PATCH /slots/{slotId}/status` | Toggles slot status (mirrors `updateSlotStatus.ts`). |
 
 ### `backend/local_api.py`
 
@@ -182,6 +182,10 @@ A lightweight local HTTP server (runs on `http://127.0.0.1:3001`) that loads the
 ```bash
 python backend/local_api.py --port 3001
 ```
+
+### `backend/env.json`
+
+Local environment variables for `sam local invoke` and `sam local start-api`. It maps each function to its DynamoDB table names and region so handlers can run locally without deploying.
 
 ### `backend/seed/` — seed data and tests
 
@@ -192,16 +196,16 @@ python backend/local_api.py --port 3001
 | `backend/seed/test_load_seed_data.py` | Unit tests for the seed loader. |
 | `backend/seed/test_config_defaults.py` | Unit tests for config defaults (region, template). |
 
-### `events/` — sample Lambda events for local testing
+### `backend/events/` — sample Lambda events for local testing
 
-Used with `sam local invoke <FunctionName> --event events/<file>.json` to test a single handler without a live API call.
+Used with `sam local invoke <FunctionName> --event backend/events/<file>.json` to test a single handler without a live API call.
 
 | Path | Target function |
 |------|-----------------|
-| `events/get_slots_event.json` | `GetSlotsFunction` |
-| `events/create_slot_event.json` | `CreateSlotFunction` |
-| `events/book_slot_event.json` | `BookSlotFunction` |
-| `events/get_bookings_event.json` | `GetBookingsFunction` |
+| `backend/events/get_slots_event.json` | `GetSlotsFunction` |
+| `backend/events/create_slot_event.json` | `CreateSlotFunction` |
+| `backend/events/book_slot_event.json` | `BookSlotFunction` |
+| `backend/events/get_bookings_event.json` | `GetBookingsFunction` |
 
 ---
 
@@ -288,11 +292,11 @@ npm install
 cd backend/seed && python -m unittest discover -v
 
 # Local API simulation
-sam local start-api --env-vars env.json
+sam local start-api --env-vars backend/env.json
 # curl http://localhost:3000/slots
 
 # Test a single function
-sam local invoke GetSlotsFunction --event events/get_slots_event.json
+sam local invoke GetSlotsFunction --event backend/events/get_slots_event.json
 ```
 
 ## GitHub Actions Secrets Required

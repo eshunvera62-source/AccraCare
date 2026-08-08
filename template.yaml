@@ -459,8 +459,8 @@ Resources:
     Properties:
       FunctionName: !Sub accra-hospital-delete-booking-${Stage}
       Runtime: python3.12
-      CodeUri: backend/lambdas/delete_booking/
-      Handler: handler.lambda_handler
+      CodeUri: backend/lambdas/
+      Handler: delete_booking.lambda_handler
       Environment:
         Variables:
           BOOKINGS_TABLE: !Ref BookingsTable
@@ -480,8 +480,8 @@ Resources:
     Properties:
       FunctionName: !Sub accra-hospital-get-bookings-by-email-${Stage}
       Runtime: python3.12
-      CodeUri: backend/lambdas/get_bookings_by_email/
-      Handler: handler.lambda_handler
+      CodeUri: backend/lambdas/
+      Handler: get_bookings_by_email.lambda_handler
       Environment:
         Variables:
           BOOKINGS_TABLE: !Ref BookingsTable
