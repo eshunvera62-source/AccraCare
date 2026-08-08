@@ -7,7 +7,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 class ConfigDefaultsTests(unittest.TestCase):
     def test_local_env_uses_us_east_1(self):
-        with open(os.path.join(ROOT_DIR, "env.json"), encoding="utf-8") as handle:
+        with open(os.path.join(ROOT_DIR, "backend", "env.json"), encoding="utf-8") as handle:
             env_config = json.load(handle)
 
         for function_config in env_config.values():
