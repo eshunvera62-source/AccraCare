@@ -12,10 +12,10 @@
   padding: 0.65rem 1.25rem;
   font-size: 0.9rem;
   font-weight: 600;
-  border-radius: 9999px; /* Pill shape */
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
   white-space: nowrap;
 }
 
@@ -26,7 +26,11 @@
 
 .btn-primary:hover {
   background-color: var(--accent-hover);
+  box-shadow: 0 8px 16px var(--accent-border);
+  transform: translateY(-1px);
 }
+
+.btn:active { transform: translateY(0); box-shadow: none; }
 
 .btn-outline {
   background-color: transparent;
@@ -52,18 +56,22 @@
 .slot-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 1rem;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  animation: card-enter 420ms var(--transition-smooth) both;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-smooth), transform var(--transition-smooth), opacity var(--transition-smooth);
 }
 
 .slot-card.available:hover {
   border-color: var(--accent-border);
-  background-color: #FAFDFB;
+  background-color: var(--bg-surface);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
 }
 
 .slot-card.unavailable {
@@ -179,16 +187,17 @@
   width: 100%;
   padding: 0.65rem 0.85rem;
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background-color: var(--bg-surface);
   font-size: 0.9rem;
   color: var(--text-main);
-  transition: border-color 0.15s ease;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
 }
 
 .form-control:focus {
   outline: none;
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-light);
 }
 
 .form-hint {
@@ -206,7 +215,7 @@
 /* Success / Alert State Boxes */
 .alert-box {
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.875rem;
   line-height: 1.5;
   margin-bottom: 1rem;
@@ -274,5 +283,13 @@
 }
 
 .admin-table tr:hover td {
-  background-color: #FAFDFB;
+  background-color: var(--bg-subtle);
 }
+
+@keyframes card-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.slots-grid .slot-card:nth-child(2) { animation-delay: 50ms; }
+.slots-grid .slot-card:nth-child(3) { animation-delay: 100ms; }
+.slots-grid .slot-card:nth-child(4) { animation-delay: 150ms; }
+.slots-grid .slot-card:nth-child(5) { animation-delay: 200ms; }
+.slots-grid .slot-card:nth-child(6) { animation-delay: 250ms; }
