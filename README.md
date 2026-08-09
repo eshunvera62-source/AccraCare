@@ -375,7 +375,7 @@ sam build
 
 For the first deployment, run `sam deploy --guided`. Choose a `dev`, `test`, or `prod` stage; enter the budget and notification email addresses; allow SAM to create IAM roles; and save the answers to `samconfig.toml`. Set `AdminApiKey` to a long random value for admin-only routes, and set `FrontendOrigin` to the CloudFront URL used by the browser client. Do not commit either value. Confirm the SNS subscription email so booking and operational alerts can be delivered.
 
-For later releases, use `sam build && sam deploy`. Retrieve the stack outputs with `sam list stack-outputs --stack-name accra-hospital-capstone`, load demo slots with `backend/seed/load_seed_data.py`, set `API_BASE_URL` in `frontend/scripts/api.js` to `ApiBaseUrl` (with no trailing slash), and sync the frontend to `FrontendBucketName`. Open `FrontendWebsiteUrl` and verify a booking, its SNS confirmation, and CloudWatch logs.
+For later releases, use `sam build && sam deploy`. Retrieve the stack outputs with `sam list stack-outputs --stack-name accra-hospital-capstone`, load demo slots with `backend/seed/load_seed_data.py`, set `API_BASE_URL` in `frontend/scripts/api.js` to `ApiBaseUrl` (with no trailing slash), and sync the frontend to `FrontendBucketName`. `FrontendWebsiteUrl` is a complete HTTPS URL. The frontend bucket is intentionally private; only CloudFront can read it through Origin Access Control. Verify a booking, its SNS confirmation, and CloudWatch logs.
 
 Pushing to `main` runs the GitHub Actions workflow: it tests the seed scripts, validates/builds/deploys the SAM stack, seeds DynamoDB, injects the API URL into the frontend, syncs it to S3, and invalidates CloudFront. Configure the required secrets below before relying on that workflow.
 

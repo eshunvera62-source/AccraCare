@@ -692,9 +692,6 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub accra-hospital-frontend-${Stage}-${AWS::AccountId}
-      WebsiteConfiguration:
-        IndexDocument: index.html
-        ErrorDocument: index.html
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:
@@ -708,10 +705,20 @@ Resources:
             NoncurrentVersionExpiration:
               NoncurrentDays: 30
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  FrontendOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub accra-hospital-frontend-oac-${Stage}
+        Description: Allow CloudFront to read the private frontend bucket.
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
 
   FrontendBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -720,11 +727,15 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: PublicReadGetObject
+          - Sid: AllowCloudFrontRead
             Effect: Allow
-            Principal: '*'
+            Principal:
+              Service: cloudfront.amazonaws.com
             Action: s3:GetObject
             Resource: !Sub arn:aws:s3:::${FrontendBucket}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${FrontendCloudFrontDistribution}
           - Sid: DenyNonHttps
             Effect: Deny
             Principal: '*'
@@ -744,11 +755,9 @@ Resources:
         DefaultRootObject: index.html
         Origins:
           - Id: FrontendS3Origin
-            DomainName: !Sub ${FrontendBucket}.s3-website.${AWS::Region}.amazonaws.com
-            CustomOriginConfig:
-              # S3 website endpoints only support HTTP. Viewer traffic remains
-              # HTTPS-only through CloudFront's redirect-to-https policy.
-              OriginProtocolPolicy: http-only
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt FrontendOriginAccessControl.Id
+            S3OriginConfig: {}
         DefaultCacheBehavior:
           TargetOriginId: FrontendS3Origin
           ViewerProtocolPolicy: redirect-to-https
@@ -883,8 +892,8 @@ Outputs:
     Description: S3 bucket for frontend assets
     Value: !Ref FrontendBucket
   FrontendWebsiteUrl:
-    Description: CloudFront distribution domain for the frontend
-    Value: !GetAtt FrontendCloudFrontDistribution.DomainName
+    Description: HTTPS CloudFront URL for the frontend
+    Value: !Sub https://${FrontendCloudFrontDistribution.DomainName}
   FrontendDistributionId:
     Description: CloudFront distribution ID for cache invalidation
     Value: !Ref FrontendCloudFrontDistribution
