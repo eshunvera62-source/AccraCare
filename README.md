@@ -313,16 +313,16 @@ Used with `sam local invoke <FunctionName> --event backend/events/<file>.json` t
 
 - [x] CloudWatch Logs on all Lambda functions (14-day retention)
 - [x] CloudWatch Alarm: Lambda error rate > 5% → SNS ops alert
-- [x] CloudWatch Alarm: API Gateway 5xx errors → SNS ops alert
+- [x] CloudWatch Alarm: API Gateway 5xx errors ≥ 1 per 5 minutes → SNS ops alert
 - [x] CloudWatch Dashboard: invocations, errors, duration, API request count
 - [x] API Gateway access logging (JSON format)
 - [x] Input validation + regex sanitisation on all path/query/body params
 - [x] IAM least-privilege (DynamoDBReadPolicy / DynamoDBCrudPolicy per function)
 - [x] DynamoDB SSE-KMS, PITR, TTL on both tables
-- [x] S3 SSE-KMS encryption + versioning + lifecycle
+- [x] S3 SSE-S3 (AES256) encryption + versioning + lifecycle
 - [x] SNS topics encrypted with `alias/aws/sns`
 - [x] HTTPS-only bucket policy (DenyNonHttps)
-- [x] AWS Budgets: alert at 80% actual and 100% forecasted of $5/month
+- [x] AWS Budgets: 80% actual and 100% forecasted monthly cost alerts
 
 ### Phase 5 — Deployment & Optimisation
 
