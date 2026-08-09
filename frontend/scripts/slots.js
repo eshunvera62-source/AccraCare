@@ -29,7 +29,12 @@ let currentFilters = {
 export async function initSlotCatalog(containerEl, onSelectBookCallback) {
   if (!containerEl) return;
 
-  cachedSlots = await fetchSlots();
+  try {
+    cachedSlots = await fetchSlots();
+  } catch (error) {
+    renderLoadError(containerEl, error);
+    return;
+  }
   populateFilterOptions(cachedSlots);
   renderSlots(containerEl, onSelectBookCallback);
 
@@ -83,8 +88,33 @@ export async function initSlotCatalog(containerEl, onSelectBookCallback) {
  * @param {Function} onSelectBookCallback - Called when a patient clicks "Book Slot".
  */
 export async function refreshSlotCatalog(containerEl, onSelectBookCallback) {
-  cachedSlots = await fetchSlots();
+  try {
+    cachedSlots = await fetchSlots();
+  } catch (error) {
+    renderLoadError(containerEl, error);
+    return;
+  }
   renderSlots(containerEl, onSelectBookCallback);
+}
+
+/**
+ * Renders a useful failure state instead of incorrectly presenting an API
+ * outage as an empty search result.
+ *
+ * @param {HTMLElement} containerEl - The slots grid container element.
+ * @param {Error} error - Slot loading error.
+ */
+function renderLoadError(containerEl, error) {
+  containerEl.innerHTML = `
+    <div style="grid-column: 1 / -1; padding: 3rem; text-align: center; background: #FFFFFF; border: 1px solid var(--border-light); border-radius: 8px;">
+      <h3 style="font-family: var(--font-serif); margin-bottom: 0.5rem; color: var(--text-main);">Appointment slots are temporarily unavailable</h3>
+      <p style="font-size: 0.85rem; color: var(--text-soft);">${escapeHtml(error.message)}</p>
+      <button class="btn btn-outline" type="button" style="margin-top: 1rem;" data-retry-slots>Try again</button>
+    </div>
+  `;
+  containerEl.querySelector('[data-retry-slots]')?.addEventListener('click', () => {
+    window.location.reload();
+  });
 }
 
 /**

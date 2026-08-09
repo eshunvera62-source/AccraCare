@@ -99,8 +99,22 @@ async function apiFetch(path, options = {}) {
  * @returns {Promise<Array>} List of slot objects.
  */
 export async function fetchSlots() {
-  const { ok, data } = await apiFetch('/slots');
-  if (!ok) return [];
+  let result;
+  try {
+    result = await apiFetch('/slots');
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the appointment service at ${API_BASE_URL}. ${error.message}`,
+    );
+  }
+
+  const { ok, status, data } = result;
+  if (!ok) {
+    throw new Error(data?.error || `The appointment service returned HTTP ${status}.`);
+  }
+  if (!Array.isArray(data)) {
+    throw new Error('The appointment service returned an invalid slots response.');
+  }
   return data;
 }
 
