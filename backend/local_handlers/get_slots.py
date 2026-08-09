@@ -1,6 +1,10 @@
 """
+get_slots.py
+---------------------------------------------------------------------------
 GET /slots
 Returns every appointment slot in the SlotsTable.
+Public read endpoint — no PII is exposed.
+---------------------------------------------------------------------------
 """
 import json
 import os
@@ -45,9 +49,10 @@ def lambda_handler(event, context):
             "headers": CORS_HEADERS,
             "body": json.dumps(items, default=decimal_default)
         }
-    except Exception as exc:
+    except Exception:
+        # Do NOT leak internal error details to the client.
         return {
             "statusCode": 500,
             "headers": CORS_HEADERS,
-            "body": json.dumps({"error": str(exc)})
+            "body": json.dumps({"error": "Failed to fetch slots"})
         }

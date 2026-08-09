@@ -86,7 +86,9 @@ jobs:
               Stage=dev \
               BudgetLimitUsd=5 \
               BudgetAlertEmail=${{ secrets.BUDGET_ALERT_EMAIL }} \
-              NotificationEmail=${{ secrets.NOTIFICATION_EMAIL }}
+              NotificationEmail=${{ secrets.NOTIFICATION_EMAIL }} \
+              AdminApiKey=${{ secrets.ADMIN_API_KEY }} \
+              FrontendOrigin=${{ secrets.FRONTEND_ORIGIN }}
 
       - name: Capture stack outputs
         id: stack_outputs

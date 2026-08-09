@@ -8,6 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
+    "types": ["node"],
     "outDir": "./dist"
   },
   "exclude": ["node_modules", "dist"]

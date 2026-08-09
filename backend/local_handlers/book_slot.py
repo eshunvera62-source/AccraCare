@@ -1,6 +1,16 @@
 """
+book_slot.py
+---------------------------------------------------------------------------
 POST /slots/{slotId}/book
 Atomically books one seat on a slot and records the booking.
+
+SECURITY NOTES:
+1. The confirmation code is generated using `secrets.randbelow`
+   (cryptographically secure) rather than `random.randint` which is
+   predictable and forgeable.
+2. The DynamoDB conditional update (`availableSeats > :zero`) prevents the
+   race condition where two patients book the last seat simultaneously.
+3. All user-supplied fields are stripped and length-capped.
 
 Expected JSON body:
 {
@@ -11,6 +21,7 @@ Expected JSON body:
 
 Returns the same success / SLOT_JUST_FILLED contract the frontend's
 mock api.js already expects, so booking.js needs no changes.
+---------------------------------------------------------------------------
 """
 import json
 import os
@@ -149,9 +160,10 @@ def lambda_handler(event, context):
                 default=decimal_default
             )
         }
-    except Exception as exc:
+    except Exception:
+        # Do NOT leak internal error details to the client.
         return {
             "statusCode": 500,
             "headers": CORS_HEADERS,
-            "body": json.dumps({"success": False, "error": str(exc)})
+            "body": json.dumps({"success": False, "error": "Failed to book slot"})
         }

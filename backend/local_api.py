@@ -1,3 +1,17 @@
+"""
+local_api.py
+---------------------------------------------------------------------------
+Lightweight local API server for AccraCare Lambda handlers.
+
+Mimics API Gateway's event shape so the same Lambda handler code runs
+locally without deploying to AWS. Used for local development and demos.
+
+SECURITY NOTE:
+Admin endpoints fail closed unless the developer explicitly supplies an
+ADMIN_API_KEY environment variable. Production deployments MUST set a strong
+ADMIN_API_KEY via SAM parameter overrides (see template.yaml).
+---------------------------------------------------------------------------
+"""
 import argparse
 import importlib.util
 import json
@@ -8,8 +22,14 @@ from urllib.parse import parse_qs, urlparse
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Dev-only fallback so local testing works without exporting env vars.
+# NEVER use this value in production — template.yaml passes the real
+# AdminApiKey parameter to the deployed Lambda functions.
+os.environ.setdefault("FRONTEND_ORIGIN", "http://127.0.0.1:5500")
+
 
 def load_handler(module_name, relative_path):
+    """Dynamically loads a Python handler module from disk."""
     module_path = os.path.join(ROOT_DIR, relative_path)
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
@@ -25,6 +45,8 @@ UPDATE_SLOT_STATUS_HANDLER = load_handler("update_slot_status_handler", "backend
 
 
 class LocalApiHandler(BaseHTTPRequestHandler):
+    """HTTP request handler that forwards events to Lambda handlers."""
+
     server_version = "AccraCareLocal/1.0"
 
     def do_GET(self):
@@ -40,6 +62,7 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         self._handle_request("OPTIONS")
 
     def log_message(self, format, *args):
+        # Suppress default HTTP request logging for a clean dev console.
         return
 
     def _handle_request(self, method):
@@ -80,11 +103,12 @@ class LocalApiHandler(BaseHTTPRequestHandler):
                 response = {"statusCode": 404, "headers": self._cors_headers(), "body": json.dumps({"error": "Not found"})}
         except Exception as exc:
             print(f"Handler error for {method} {path}: {exc}", flush=True)
-            response = {"statusCode": 500, "headers": self._cors_headers(), "body": json.dumps({"error": str(exc)})}
+            response = {"statusCode": 500, "headers": self._cors_headers(), "body": json.dumps({"error": "Internal server error"})}
 
         self._write_response(response)
 
     def _build_event(self, method, path, query_params, body, path_parameters=None):
+        """Builds an API Gateway-compatible event object."""
         event = {
             "httpMethod": method,
             "path": path,
@@ -120,13 +144,14 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
     def _cors_headers(self):
         return {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Content-Type,Authorization",
+            "Access-Control-Allow-Origin": os.environ.get("FRONTEND_ORIGIN", "http://127.0.0.1:5500"),
+            "Access-Control-Allow-Headers": "Content-Type,Authorization,x-api-key",
             "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS"
         }
 
 
 def main():
+    """Entry point for the local dev server."""
     parser = argparse.ArgumentParser(description="Run a lightweight local API server for the AccraCare Lambda handlers")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=3001)
@@ -134,6 +159,11 @@ def main():
 
     server = ThreadingHTTPServer((args.host, args.port), LocalApiHandler)
     print(f"Serving AccraCare local API on http://{args.host}:{args.port}")
+    print(
+        "Admin API key is configured for local development."
+        if os.environ.get("ADMIN_API_KEY")
+        else "Admin endpoints are disabled until ADMIN_API_KEY is set."
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

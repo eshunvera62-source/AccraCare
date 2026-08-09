@@ -1,5 +1,6 @@
 /**
  * api.js
+ * ---------------------------------------------------------------------------
  * Data Access Layer for Accra Hospital Appointment Booking Platform.
  *
  * Talks to the deployed API Gateway + Lambda + DynamoDB backend.
@@ -7,13 +8,29 @@
  * after deployment, or allow CI to inject it automatically.
  * It looks like:
  *   https://abcd123456.execute-api.us-east-1.amazonaws.com/dev
+ *
+ * SECURITY NOTES:
+ * 1. Admin-only endpoints (createSlot, updateSlotStatus, getBookings, etc.)
+ *    require an `x-api-key` header. An admin credential must never be bundled
+ *    into this public static site or injected by CI.
+ * 2. The API base URL is validated to be either HTTPS (production) or
+ *    localhost (development) — plain HTTP to arbitrary hosts is rejected.
+ * ---------------------------------------------------------------------------
  */
 
 const DEFAULT_API_BASE_URL = 'http://127.0.0.1:3001';
 const configuredApiBaseUrl = 'REPLACE_WITH_YOUR_API_GATEWAY_INVOKE_URL';
+
+// The staff portal sets this value only for the active in-memory session after
+// the staff member enters their credential. It is never persisted or deployed.
+
 export const API_BASE_URL =
   (typeof window !== 'undefined' && window.__ACCRA_API_BASE_URL__) ||
   (configuredApiBaseUrl.startsWith('REPLACE_') ? DEFAULT_API_BASE_URL : configuredApiBaseUrl);
+
+function getAdminApiKey() {
+  return typeof window !== 'undefined' ? window.__ACCRA_ADMIN_API_KEY__ || '' : '';
+}
 
 // Guard: fail fast if URL is unconfigured or not a valid local/HTTPS API URL
 if (!API_BASE_URL) {
@@ -37,14 +54,38 @@ try {
   throw new Error(`Invalid API_BASE_URL: ${e.message}`);
 }
 
+/**
+ * Core fetch wrapper that:
+ *  - Validates the target URL stays within the configured API base.
+ *  - Attaches the admin API key header when `options.admin` is true.
+ *  - Parses JSON responses safely (never throws on unexpected response body).
+ *
+ * @param {string} path - API path (e.g. '/slots').
+ * @param {object} options - Fetch options (method, body, etc.).
+ * @param {boolean} [options.admin] - If true, attaches the x-api-key header.
+ * @returns {Promise<{ok: boolean, status: number, data: object}>}
+ */
 async function apiFetch(path, options = {}) {
   const base = API_BASE_URL.endsWith('/') ? API_BASE_URL : API_BASE_URL + '/';
   const url = new URL(path.startsWith('/') ? path.slice(1) : path, base);
+  // SECURITY: Only allow requests to the configured API base URL.
   if (!url.href.startsWith(API_BASE_URL)) {
     throw new Error(`Blocked request to disallowed URL: ${url.href}`);
   }
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (options.admin) {
+    const adminApiKey = getAdminApiKey();
+    if (!adminApiKey) {
+      throw new Error(
+        'Admin authentication is not configured. Do not place an admin secret in the public site.',
+      );
+    }
+    headers['x-api-key'] = adminApiKey;
+  }
+
   const res = await fetch(url.href, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...options,
   });
   const data = await res.json().catch(() => ({}));
@@ -53,6 +94,9 @@ async function apiFetch(path, options = {}) {
 
 /**
  * Fetches all hospital appointment slots.
+ * Public endpoint — no auth required.
+ *
+ * @returns {Promise<Array>} List of slot objects.
  */
 export async function fetchSlots() {
   const { ok, data } = await apiFetch('/slots');
@@ -62,20 +106,31 @@ export async function fetchSlots() {
 
 /**
  * Creates a new appointment slot (used by Admin portal).
+ * Admin-only — requires x-api-key header.
+ *
+ * @param {object} input - Slot creation payload.
+ * @returns {Promise<object>} Created slot object.
  */
 export async function createSlot(input) {
   const { data } = await apiFetch('/slots', {
     method: 'POST',
     body: JSON.stringify(input),
+    admin: true,
   });
   return data;
 }
 
 /**
  * Books a slot for a patient.
+ * Public endpoint — no auth required.
+ *
  * Handles slot capacity check and race condition error states, matching
  * the same { success, booking, updatedSlot } / { success:false, error } shape
  * the rest of the frontend (booking.js) already expects.
+ *
+ * @param {string} slotId - The slot ID to book.
+ * @param {object} patientData - { name, phone, email? }.
+ * @returns {Promise<object>} Booking response.
  */
 export async function bookSlot(slotId, patientData) {
   const { data } = await apiFetch(`/slots/${slotId}/book`, {
@@ -91,21 +146,34 @@ export async function bookSlot(slotId, patientData) {
 
 /**
  * Fetches patient bookings (filtered by slotId if provided).
+ * Admin-only — returns patient PII, requires x-api-key header.
+ *
+ * @param {string|null} slotId - Optional slot ID filter.
+ * @returns {Promise<Array>} List of booking objects.
  */
 export async function fetchBookings(slotId = null) {
   const query = slotId && slotId !== 'all' ? `?slotId=${encodeURIComponent(slotId)}` : '';
-  const { ok, data } = await apiFetch(`/bookings${query}`);
+  const { ok, data } = await apiFetch(`/bookings${query}`, { admin: true });
+  if (!ok && (data.error === 'Unauthorized' || data.error === 'Invalid API key')) {
+    throw new Error('Unauthorized: Admin API key is required to view patient bookings.');
+  }
   if (!ok) return [];
   return data;
 }
 
 /**
  * Updates operational status of a slot.
+ * Admin-only — requires x-api-key header.
+ *
+ * @param {string} slotId - The slot ID to update.
+ * @param {string} newStatus - 'available' or 'full'.
+ * @returns {Promise<object>} Updated slot object.
  */
 export async function updateSlotStatus(slotId, newStatus) {
   const { data } = await apiFetch(`/slots/${slotId}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status: newStatus }),
+    admin: true,
   });
   return data;
 }

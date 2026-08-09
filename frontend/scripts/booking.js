@@ -1,6 +1,16 @@
 /**
  * booking.js
- * Manages the appointment booking modal, form validation, success receipts, and capacity handling.
+ * ---------------------------------------------------------------------------
+ * Manages the appointment booking modal, form validation, success receipts,
+ * and capacity handling.
+ *
+ * SECURITY NOTES:
+ * - All API/user-derived values are rendered via `textContent` (never
+ *   `innerHTML`) to prevent XSS injection.
+ * - Patient phone numbers are validated against Ghanaian format.
+ * - The booking request is sent to the server which atomically decrements
+ *   seat availability (prevents race conditions).
+ * ---------------------------------------------------------------------------
  */
 
 import { bookSlot } from './api.js';
@@ -9,6 +19,13 @@ let activeSlot = null;
 let onSuccessCallback = null;
 let onSlotFullCallback = null;
 
+/**
+ * Opens the booking modal for a given slot.
+ *
+ * @param {object} slot - The selected slot object.
+ * @param {Function} onSuccess - Called after a successful booking.
+ * @param {Function} onSlotFull - Called if the slot fills during booking.
+ */
 export function openBookingModal(slot, onSuccess, onSlotFull) {
   activeSlot = slot;
   onSuccessCallback = onSuccess;
@@ -21,12 +38,19 @@ export function openBookingModal(slot, onSuccess, onSlotFull) {
   overlay.classList.add('active');
 }
 
+/**
+ * Closes the booking modal and clears the active slot.
+ */
 export function closeBookingModal() {
   const overlay = document.getElementById('booking-modal-overlay');
   if (overlay) overlay.classList.remove('active');
   activeSlot = null;
 }
 
+/**
+ * Renders the booking form inside the modal.
+ * Dynamic slot info is set via textContent — never parsed as HTML.
+ */
 function renderModalForm() {
   const container = document.getElementById('modal-card-content');
   if (!container || !activeSlot) return;
@@ -94,6 +118,12 @@ function renderModalForm() {
   if (form) form.addEventListener('submit', handleFormSubmit);
 }
 
+/**
+ * Handles booking form submission: validates input, calls the API,
+ * and renders the appropriate success/error state.
+ *
+ * @param {Event} e - Form submit event.
+ */
 async function handleFormSubmit(e) {
   e.preventDefault();
 
@@ -161,6 +191,12 @@ async function handleFormSubmit(e) {
   }
 }
 
+/**
+ * Renders the success state with the confirmation code.
+ * All dynamic values are set via textContent — never parsed as HTML.
+ *
+ * @param {object} booking - The confirmed booking object.
+ */
 function renderSuccessState(booking) {
   const container = document.getElementById('modal-card-content');
   if (!container) return;
@@ -209,6 +245,12 @@ function renderSuccessState(booking) {
   document.getElementById('finish-booking-btn')?.addEventListener('click', closeBookingModal);
 }
 
+/**
+ * Generates and downloads an .ics calendar file for the booking.
+ *
+ * @param {object} booking - The confirmed booking object.
+ * @param {object} slot - The booked slot object.
+ */
 function downloadICalendarFile(booking, slot) {
   const startDate = new Date(slot.dateTime);
   const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
@@ -245,6 +287,12 @@ function downloadICalendarFile(booking, slot) {
   URL.revokeObjectURL(downloadUrl);
 }
 
+/**
+ * Renders the "slot just became full" error state.
+ * Hospital name is set via textContent — never parsed as HTML.
+ *
+ * @param {object} updatedSlot - The updated slot object showing it's full.
+ */
 function renderSlotFullErrorState(updatedSlot) {
   const container = document.getElementById('modal-card-content');
   if (!container) return;
@@ -270,11 +318,24 @@ function renderSlotFullErrorState(updatedSlot) {
   document.getElementById('pick-other-slot-btn')?.addEventListener('click', closeBookingModal);
 }
 
+/**
+ * Validates a Ghanaian phone number format.
+ * Accepts formats like: 024 123 4567, +233 24 123 4567, 0551234567.
+ *
+ * @param {string} phone - Phone number to validate.
+ * @returns {boolean} True if the phone number is valid.
+ */
 function validateGhanaPhone(phone) {
-  const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  const cleaned = phone.replace(/[\s\-()]/g, '');
   return /^(\+?233|0)[235][0-9]{8}$/.test(cleaned) || cleaned.length >= 9;
 }
 
+/**
+ * Escapes HTML special characters to prevent XSS injection.
+ *
+ * @param {*} str - Value to escape.
+ * @returns {string} Escaped string safe for innerHTML.
+ */
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)

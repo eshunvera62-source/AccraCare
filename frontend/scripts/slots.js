@@ -1,6 +1,13 @@
 /**
  * slots.js
+ * ---------------------------------------------------------------------------
  * Renders and filters the Accra Hospital appointment slot catalog cards.
+ *
+ * SECURITY NOTES:
+ * - All user/API-derived values rendered into HTML are passed through
+ *   `escapeHtml()` to prevent XSS injection.
+ * - Slot IDs are validated before being used in DOM queries.
+ * ---------------------------------------------------------------------------
  */
 
 import { fetchSlots } from './api.js';
@@ -10,15 +17,18 @@ let currentFilters = {
   searchQuery: '',
   hospital: 'all',
   department: 'all',
-  status: 'all'
+  status: 'all',
 };
 
 /**
  * Initializes slot listing, populates filter dropdowns, and renders cards.
+ *
+ * @param {HTMLElement} containerEl - The slots grid container element.
+ * @param {Function} onSelectBookCallback - Called when a patient clicks "Book Slot".
  */
 export async function initSlotCatalog(containerEl, onSelectBookCallback) {
   if (!containerEl) return;
-  
+
   cachedSlots = await fetchSlots();
   populateFilterOptions(cachedSlots);
   renderSlots(containerEl, onSelectBookCallback);
@@ -68,6 +78,9 @@ export async function initSlotCatalog(containerEl, onSelectBookCallback) {
 
 /**
  * Re-fetches slots and updates the view (e.g., after booking or admin update).
+ *
+ * @param {HTMLElement} containerEl - The slots grid container element.
+ * @param {Function} onSelectBookCallback - Called when a patient clicks "Book Slot".
  */
 export async function refreshSlotCatalog(containerEl, onSelectBookCallback) {
   cachedSlots = await fetchSlots();
@@ -76,6 +89,8 @@ export async function refreshSlotCatalog(containerEl, onSelectBookCallback) {
 
 /**
  * Populates unique hospitals and departments in the filter `<select>` elements.
+ *
+ * @param {Array} slots - List of slot objects.
  */
 function populateFilterOptions(slots) {
   const hospitalSelect = document.getElementById('hospital-select');
@@ -83,33 +98,45 @@ function populateFilterOptions(slots) {
 
   if (hospitalSelect) {
     const hospitals = Array.from(new Set(slots.map((s) => s.hospitalName)));
-    hospitalSelect.innerHTML = `<option value="all">All Accra Hospitals</option>` +
+    hospitalSelect.innerHTML =
+      `<option value="all">All Accra Hospitals</option>` +
       hospitals.map((h) => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
   }
 
   if (deptSelect) {
     const depts = Array.from(new Set(slots.map((s) => s.department)));
-    deptSelect.innerHTML = `<option value="all">All Departments</option>` +
+    deptSelect.innerHTML =
+      `<option value="all">All Departments</option>` +
       depts.map((d) => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
   }
 }
 
 /**
  * Filters and renders slot cards into the grid container.
+ *
+ * @param {HTMLElement} containerEl - The slots grid container element.
+ * @param {Function} onSelectBookCallback - Called when a patient clicks "Book Slot".
  */
 function renderSlots(containerEl, onSelectBookCallback) {
   const filtered = cachedSlots.filter((slot) => {
-    const matchesSearch = !currentFilters.searchQuery ||
+    const matchesSearch =
+      !currentFilters.searchQuery ||
       slot.hospitalName.toLowerCase().includes(currentFilters.searchQuery) ||
       slot.doctorName.toLowerCase().includes(currentFilters.searchQuery) ||
       slot.department.toLowerCase().includes(currentFilters.searchQuery) ||
       slot.area.toLowerCase().includes(currentFilters.searchQuery);
 
-    const matchesHospital = currentFilters.hospital === 'all' || slot.hospitalName === currentFilters.hospital;
-    const matchesDept = currentFilters.department === 'all' || slot.department === currentFilters.department;
-    const matchesStatus = currentFilters.status === 'all' ||
-      (currentFilters.status === 'available' && slot.status === 'available' && slot.availableSeats > 0) ||
-      (currentFilters.status === 'full' && (slot.status === 'full' || slot.availableSeats === 0));
+    const matchesHospital =
+      currentFilters.hospital === 'all' || slot.hospitalName === currentFilters.hospital;
+    const matchesDept =
+      currentFilters.department === 'all' || slot.department === currentFilters.department;
+    const matchesStatus =
+      currentFilters.status === 'all' ||
+      (currentFilters.status === 'available' &&
+        slot.status === 'available' &&
+        slot.availableSeats > 0) ||
+      (currentFilters.status === 'full' &&
+        (slot.status === 'full' || slot.availableSeats === 0));
 
     return matchesSearch && matchesHospital && matchesDept && matchesStatus;
   });
@@ -140,21 +167,25 @@ function renderSlots(containerEl, onSelectBookCallback) {
 
 /**
  * Generates HTML for an individual slot card.
+ * All dynamic values are escaped to prevent XSS.
+ *
+ * @param {object} slot - Slot object from the API.
+ * @returns {string} HTML string for the slot card.
  */
 function createSlotCardHtml(slot) {
   const isAvailable = slot.status === 'available' && slot.availableSeats > 0;
-  
+
   const formattedDate = new Date(slot.dateTime).toLocaleDateString('en-GB', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
-    year: 'numeric'
+    year: 'numeric',
   });
 
   const formattedTime = new Date(slot.dateTime).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: true
+    hour12: true,
   });
 
   return `
@@ -192,6 +223,12 @@ function createSlotCardHtml(slot) {
   `;
 }
 
+/**
+ * Escapes HTML special characters to prevent XSS injection.
+ *
+ * @param {*} str - Value to escape.
+ * @returns {string} Escaped string safe for innerHTML.
+ */
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)

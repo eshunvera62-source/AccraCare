@@ -1,6 +1,17 @@
 /**
  * admin.js
+ * ---------------------------------------------------------------------------
  * Powers the hospital staff portal (admin.html) specifically.
+ *
+ * SECURITY NOTES:
+ * 1. The staff "login" is a client-side simulation for demo purposes only.
+ *    Real authentication is enforced server-side via the `x-api-key` header
+ *    on all admin-only API endpoints (see api.js / auth.ts).
+ * 2. No session tokens are stored in localStorage/sessionStorage — the
+ *    in-memory staff user object is cleared on page refresh by design.
+ * 3. If the admin API key is not configured, admin API calls will fail with
+ *    a clear error message instead of silently returning empty data.
+ * ---------------------------------------------------------------------------
  */
 
 import { fetchSlots, createSlot, fetchBookings, updateSlotStatus } from './api.js';
@@ -72,9 +83,12 @@ function setupAuthFormListeners() {
         facility: facility,
         name: email.split('@')[0].replace('.', ' ').toUpperCase(),
         role: 'Hospital Operations Officer',
-        loggedInAt: new Date().toISOString()
+        loggedInAt: new Date().toISOString(),
       };
 
+      // Keep the credential only in memory for this browser session. It is
+      // verified server-side on each admin API request and is never persisted.
+      window.__ACCRA_ADMIN_API_KEY__ = password;
       activeStaffUser = staffUser;
 
       await showAuthenticatedAdminView(staffUser);
@@ -85,6 +99,7 @@ function setupAuthFormListeners() {
   if (signOutBtn) {
     signOutBtn.addEventListener('click', () => {
       activeStaffUser = null;
+      delete window.__ACCRA_ADMIN_API_KEY__;
       showLoginFormView();
     });
   }
@@ -120,12 +135,22 @@ async function showAuthenticatedAdminView(user) {
 }
 
 async function loadAdminData() {
-  allSlots = await fetchSlots();
-  allBookings = await fetchBookings();
+  try {
+    allSlots = await fetchSlots();
+    allBookings = await fetchBookings();
 
-  renderSlotsOverviewTable();
-  renderBookingsTable('all');
-  populateSlotFilterDropdown();
+    renderSlotsOverviewTable();
+    renderBookingsTable('all');
+    populateSlotFilterDropdown();
+  } catch (err) {
+    // Show a clear error if the admin API key is missing or invalid.
+    const alertEl = document.getElementById('create-slot-alert');
+    if (alertEl) {
+      alertEl.className = 'alert-box alert-error';
+      alertEl.textContent = err.message || 'Failed to load admin data. Check that the admin API key is configured.';
+      alertEl.style.display = 'block';
+    }
+  }
 }
 
 function setupCreateSlotForm() {
@@ -165,7 +190,7 @@ function setupCreateSlotForm() {
         doctorTitle,
         dateTime,
         totalSeats: Number(totalSeats),
-        consultationFee: fee || 'GHS 150'
+        consultationFee: fee || 'GHS 150',
       });
 
       if (alertEl) {
@@ -179,7 +204,7 @@ function setupCreateSlotForm() {
     } catch (err) {
       if (alertEl) {
         alertEl.className = 'alert-box alert-error';
-        alertEl.textContent = 'Error creating appointment slot.';
+        alertEl.textContent = err.message || 'Error creating appointment slot.';
         alertEl.style.display = 'block';
       }
     }
@@ -190,7 +215,9 @@ function renderSlotsOverviewTable() {
   const container = document.getElementById('slots-capacity-grid');
   if (!container) return;
 
-  container.innerHTML = allSlots.map((slot) => `
+  container.innerHTML = allSlots
+    .map(
+      (slot) => `
     <div style="background: var(--bg-surface); border: 1px solid var(--border-light); padding: 0.85rem; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem;">
       <div>
         <div style="font-weight: 700; color: var(--text-main); font-family: var(--font-serif);">${escapeHtml(slot.hospitalName)}</div>
@@ -206,15 +233,26 @@ function renderSlotsOverviewTable() {
         ${slot.status === 'available' ? 'Mark Full' : 'Mark Available'}
       </button>
     </div>
-  `).join('');
+  `,
+    )
+    .join('');
 
   container.querySelectorAll('[data-toggle-slot-id]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const slotId = btn.dataset.toggleSlotId;
       const curStatus = btn.dataset.currentStatus;
       const nextStatus = curStatus === 'available' ? 'full' : 'available';
-      await updateSlotStatus(slotId, nextStatus);
-      await loadAdminData();
+      try {
+        await updateSlotStatus(slotId, nextStatus);
+        await loadAdminData();
+      } catch (err) {
+        const alertEl = document.getElementById('create-slot-alert');
+        if (alertEl) {
+          alertEl.className = 'alert-box alert-error';
+          alertEl.textContent = err.message || 'Failed to update slot status.';
+          alertEl.style.display = 'block';
+        }
+      }
     });
   });
 }
@@ -223,8 +261,14 @@ function populateSlotFilterDropdown() {
   const select = document.getElementById('admin-slot-filter');
   if (!select) return;
 
-  select.innerHTML = `<option value="all">All Hospital Slots (${allSlots.length})</option>` +
-    allSlots.map((s) => `<option value="${s.id}">${escapeHtml(s.hospitalName)} - ${escapeHtml(s.doctorName)} (${escapeHtml(s.department)})</option>`).join('');
+  select.innerHTML =
+    `<option value="all">All Hospital Slots (${allSlots.length})</option>` +
+    allSlots
+      .map(
+        (s) =>
+          `<option value="${s.id}">${escapeHtml(s.hospitalName)} - ${escapeHtml(s.doctorName)} (${escapeHtml(s.department)})</option>`,
+      )
+      .join('');
 }
 
 function setupBookingsFilter() {
@@ -240,9 +284,10 @@ function renderBookingsTable(filterSlotId) {
   const tbody = document.getElementById('bookings-table-body');
   if (!tbody) return;
 
-  const filtered = filterSlotId === 'all'
-    ? allBookings
-    : allBookings.filter((b) => b.slotId === filterSlotId);
+  const filtered =
+    filterSlotId === 'all'
+      ? allBookings
+      : allBookings.filter((b) => b.slotId === filterSlotId);
 
   if (filtered.length === 0) {
     tbody.innerHTML = `
@@ -255,14 +300,15 @@ function renderBookingsTable(filterSlotId) {
     return;
   }
 
-  tbody.innerHTML = filtered.map((b) => {
-    const slot = allSlots.find((s) => s.id === b.slotId);
-    const dateStr = new Date(b.bookedAt).toLocaleString('en-GB', {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    });
+  tbody.innerHTML = filtered
+    .map((b) => {
+      const slot = allSlots.find((s) => s.id === b.slotId);
+      const dateStr = new Date(b.bookedAt).toLocaleString('en-GB', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      });
 
-    return `
+      return `
       <tr>
         <td style="font-family: monospace; font-weight: 700; color: var(--accent-primary);">${escapeHtml(b.confirmationCode)}</td>
         <td style="font-weight: 600; color: var(--text-main);">${escapeHtml(b.patientName)}</td>
@@ -278,7 +324,8 @@ function renderBookingsTable(filterSlotId) {
         <td><span class="badge badge-available">Confirmed</span></td>
       </tr>
     `;
-  }).join('');
+    })
+    .join('');
 }
 
 function escapeHtml(str) {

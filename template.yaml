@@ -21,6 +21,20 @@ Parameters:
   NotificationEmail:
     Type: String
     Description: Email address subscribed to the booking confirmation SNS topic.
+  AdminApiKey:
+    Type: String
+    NoEcho: true
+    Description: >
+      Shared secret API key required for admin-only endpoints
+      (createSlot, updateSlotStatus, getBookings, deleteBooking, etc.).
+      Passed to Lambda functions via the ADMIN_API_KEY environment variable.
+      MUST be a long, random value (e.g. openssl rand -hex 32).
+  FrontendOrigin:
+    Type: String
+    Default: ''
+    Description: >
+      The CloudFront / frontend origin URL (e.g. https://d123.cloudfront.net)
+      used to validate CORS requests. Leave empty to allow localhost only.
 
 Globals:
   Function:
@@ -30,6 +44,10 @@ Globals:
     Environment:
       Variables:
         STAGE: !Ref Stage
+        # Shared admin API key — required by all admin-protected endpoints.
+        ADMIN_API_KEY: !Ref AdminApiKey
+        # Trusted frontend origin for CORS validation.
+        FRONTEND_ORIGIN: !Ref FrontendOrigin
 
 Resources:
   # ---------------------------------------------------------------------
@@ -63,8 +81,10 @@ Resources:
       StageName: !Ref Stage
       Cors:
         AllowMethods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
-        AllowHeaders: "'Content-Type,Authorization'"
-        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,Authorization,x-api-key'"
+        # SECURITY: Do NOT use '*' here. The Lambda response layer validates
+        # the request Origin against the allow-list (CORS_ORIGINS / FRONTEND_ORIGIN).
+        AllowOrigin: !Sub "'${FrontendOrigin}'"
         MaxAge: "'600'"
       AccessLogSetting:
         DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
@@ -74,8 +94,10 @@ Resources:
         - ResourcePath: "/*"
           HttpMethod: "*"
           MetricsEnabled: true
-          LoggingLevel: INFO
-          DataTraceEnabled: true
+          LoggingLevel: ERROR
+          # SECURITY: DataTraceEnabled must stay false — it logs full request
+          # and response bodies (including patient PII) to CloudWatch.
+          DataTraceEnabled: false
           ThrottlingBurstLimit: 100
           ThrottlingRateLimit: 50
       TracingEnabled: true
@@ -723,7 +745,10 @@ Resources:
           - Id: FrontendS3Origin
             DomainName: !Sub ${FrontendBucket}.s3-website.${AWS::Region}.amazonaws.com
             CustomOriginConfig:
-              OriginProtocolPolicy: http-only
+              # SECURITY: Use HTTPS-only so all traffic to the S3 origin is encrypted.
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
         DefaultCacheBehavior:
           TargetOriginId: FrontendS3Origin
           ViewerProtocolPolicy: redirect-to-https

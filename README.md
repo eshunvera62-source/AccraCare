@@ -384,3 +384,44 @@ sam local invoke GetSlotsFunction --event backend/events/get_slots_event.json
 | `AWS_ROLE_TO_ASSUME`    | IAM role ARN for OIDC (replaces key/secret)      |
 | `BUDGET_ALERT_EMAIL`    | Email for AWS Budget and ops alarm notifications |
 | `NOTIFICATION_EMAIL`    | Email for booking confirmation SNS topic         |
+| `ADMIN_API_KEY`         | **Shared secret API key** for admin-only endpoints. Generate with `openssl rand -hex 32`; inject it into Lambda environment variables only, never the public frontend. |
+| `FRONTEND_ORIGIN`       | The CloudFront distribution URL (e.g. `https://d123.cloudfront.net`) used for CORS allow-listing. |
+
+---
+
+## Security Hardening
+
+This project has been audited and hardened with the following security controls:
+
+### Authentication & Authorization
+- **Admin-only endpoints** (`POST /slots`, `PATCH /slots/{id}/status`, `GET /bookings`, `DELETE /bookings/{id}`, `GET /bookings/by-email/{email}`, `POST /appointments`, `DELETE /appointments/{id}`, `GET /appointments`, `GET /appointments/{id}`, `POST /doctors`) require a valid `x-api-key` header.
+- The key is validated using **constant-time comparison** (`crypto.timingSafeEqual` / `hmac.compare_digest`) to prevent timing attacks.
+- The key is stored as a **GitHub Actions secret** and injected via SAM parameter overrides — never hard-coded in source.
+- If `ADMIN_API_KEY` is not configured, endpoints **fail closed** (deny by default).
+
+### Data Protection
+- **PII endpoints** (bookings, appointments) are admin-only — anonymous users cannot read patient data.
+- **`DataTraceEnabled: false`** on API Gateway — prevents full request/response bodies (including PII) from being logged to CloudWatch.
+- **`Cache-Control: no-store`** on all API responses — prevents PII from being cached by browsers or intermediaries.
+- **`Strict-Transport-Security`** header — forces HTTPS.
+- **`X-Content-Type-Options: nosniff`**, **`X-Frame-Options: DENY`**, **`Referrer-Policy: no-referrer`**, **`Content-Security-Policy`** headers on all responses.
+
+### CORS Hardening
+- **No wildcard `*`** — the `Access-Control-Allow-Origin` header is only set when the request's `Origin` matches the allow-list (`FRONTEND_ORIGIN` / `CORS_ORIGINS`).
+- CloudFront origin uses **`https-only`** protocol policy.
+
+### Input Validation & Injection Prevention
+- **Zod schemas** validate all path/query/body parameters on every TypeScript handler.
+- **Regex validation** on all path parameters (slot IDs, booking IDs, emails).
+- **XSS protection** — all user/API-derived values rendered in the frontend are escaped via `escapeHtml()` or set via `textContent` (never `innerHTML`).
+- **Error messages are sanitized** — internal exception details are never leaked to clients.
+
+### Cryptography
+- **Confirmation codes** use `crypto.randomInt` (CSPRNG) instead of `Math.random()` — prevents code forgery.
+- **UUIDs** use `crypto.randomUUID()` (CSPRNG) instead of the global `crypto` object.
+- **DynamoDB SSE** enabled on all tables.
+- **SNS topics** encrypted with `alias/aws/sns`.
+
+### Rate Limiting & Throttling
+- API Gateway throttling: **100 burst / 50 rate** per second.
+- CloudWatch alarms on Lambda error rate > 5% and API Gateway 5xx errors.

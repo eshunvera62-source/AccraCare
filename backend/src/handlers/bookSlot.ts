@@ -1,14 +1,32 @@
+/**
+ * bookSlot.ts
+ * ---------------------------------------------------------------------------
+ * POST /slots/{slotId}/book
+ * Atomically books one seat on a slot and records the booking.
+ *
+ * SECURITY NOTES:
+ * 1. The confirmation code is generated using `crypto.randomInt` (cryptographically
+ *    secure) rather than `Math.random()` which is predictable and forgeable.
+ * 2. The DynamoDB conditional update (`availableSeats > :zero`) prevents the
+ *    race condition where two patients book the last seat simultaneously.
+ * 3. All user-supplied fields are validated with Zod and length-capped.
+ * ---------------------------------------------------------------------------
+ */
+
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { randomInt, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { PublishCommand, SNSClient } from '@aws-sdk/client-sns';
 import { jsonResponse, errorResponse } from '../utils/response.js';
 import { dynamoClient } from '../utils/dynamo.js';
 
+/** Zod schema validating the slot ID path parameter. */
 const pathSchema = z.object({
-  slotId: z.string().regex(/^[\w\-]{1,64}$/),
+  slotId: z.string().regex(/^[\w-]{1,64}$/),
 });
 
+/** Zod schema validating the patient booking payload. */
 const payloadSchema = z.object({
   name: z.string().min(1).max(200),
   phone: z.string().min(1).max(50),
@@ -17,13 +35,33 @@ const payloadSchema = z.object({
 
 const snsClient = new SNSClient({});
 
+/**
+ * Generates a cryptographically secure 6-digit confirmation code.
+ *
+ * Uses `crypto.randomInt` (CSPRNG-backed) instead of `Math.random()`
+ * which is predictable and could allow an attacker to forge codes.
+ *
+ * @returns A confirmation code in the format `ACC-XXXXXX`.
+ */
+function generateConfirmationCode(): string {
+  const code = randomInt(100000, 1000000);
+  return `ACC-${code}`;
+}
+
+/**
+ * Lambda handler for booking a slot.
+ *
+ * @param event - API Gateway proxy event.
+ * @returns 200 with booking details, 400 on validation failure,
+ *          409 if the slot just filled, or 500 on unexpected error.
+ */
 export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   const slotsTable = process.env.SLOTS_TABLE;
   const bookingsTable = process.env.BOOKINGS_TABLE;
   const snsTopicArn = process.env.SNS_TOPIC_ARN;
 
   if (!slotsTable || !bookingsTable) {
-    return errorResponse(500, 'Missing SLOTS_TABLE or BOOKINGS_TABLE configuration');
+    return errorResponse(500, 'Missing SLOTS_TABLE or BOOKINGS_TABLE configuration', undefined, event);
   }
 
   try {
@@ -31,6 +69,8 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
     const body = payloadSchema.parse(JSON.parse(event.body ?? '{}'));
     const slotId = pathParameters.slotId;
 
+    // Atomically decrement availableSeats — this is what prevents the
+    // race condition where two patients book the last seat simultaneously.
     let updatedSlot = (
       await dynamoClient.send(
         new UpdateCommand({
@@ -46,6 +86,7 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
       )
     ).Attributes as Record<string, unknown>;
 
+    // If seats hit zero, flip status to full.
     if (Number(updatedSlot.availableSeats ?? 0) <= 0 && updatedSlot.status !== 'full') {
       updatedSlot = (
         await dynamoClient.send(
@@ -61,9 +102,9 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
       ).Attributes as Record<string, unknown>;
     }
 
-    const confirmationCode = `ACC-${Math.floor(Math.random() * 900000) + 100000}`;
+    const confirmationCode = generateConfirmationCode();
     const booking = {
-      id: `bk-${crypto.randomUUID().slice(0, 8)}`,
+      id: `bk-${randomUUID().slice(0, 8)}`,
       confirmationCode,
       slotId,
       patientName: body.name,
@@ -82,6 +123,7 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
       }),
     );
 
+    // Send SNS notification — never block a successful booking on failure.
     if (snsTopicArn) {
       try {
         await snsClient.send(
@@ -92,18 +134,18 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
           }),
         );
       } catch {
-        // Do not block a successful booking on notification failure.
+        // Notification failure should never block a successful booking.
       }
     }
 
-    return jsonResponse(200, { success: true, booking, updatedSlot });
+    return jsonResponse(200, { success: true, booking, updatedSlot }, event);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return jsonResponse(400, {
         success: false,
         error: 'Invalid booking payload',
         details: error.issues,
-      });
+      }, event);
     }
 
     if ((error as Error).name === 'ConditionalCheckFailedException') {
@@ -117,9 +159,10 @@ export async function lambdaHandler(event: APIGatewayProxyEvent): Promise<APIGat
         success: false,
         error: 'SLOT_JUST_FILLED',
         updatedSlot: currentSlot.Item ?? null,
-      });
+      }, event);
     }
 
-    return errorResponse(500, 'Failed to book slot', { message: (error as Error).message });
+    // Do NOT leak internal error details to the client.
+    return errorResponse(500, 'Failed to book slot', undefined, event);
   }
 }
