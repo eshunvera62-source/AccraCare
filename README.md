@@ -48,70 +48,67 @@ Everything above is one CloudFormation stack defined in template.yaml
 ### Patient experience
 
 **Homepage**
-![Homepage](screenshots/homepage.png)
+![Homepage](docs/screenshots/homepage.png)
 
 **Browsing and booking a slot**
-![Booking flow](screenshots/homepage-booking-flow.png)
+![Booking flow](docs/screenshots/homepage-booking-flow.png)
 
 **Booking page**
-![Booking page](screenshots/booking-page.png)
+![Booking page](docs/screenshots/booking-page.png)
 
 **Booking confirmation**
-![Booking confirmation](screenshots/booking-confirmation.png)
+![Booking confirmation](docs/screenshots/booking-confirmation.png)
 
 ### Admin portal
 
 **Publishing a new slot and managing capacity**
-![Admin staff portal](screenshots/admin-staff-portal.png)
+![Admin staff portal](docs/screenshots/admin-staff-portal.png)
 
 **Live slot availability on the patient UI**
-![Booked slots on UI](screenshots/booked-slots-on-ui.png)
+![Booked slots on UI](docs/screenshots/booked-slots-on-ui.png)
 
 ### AWS infrastructure
 
 **CloudFormation stack, all resources deployed**
-![CloudFormation stack](screenshots/cloudformation-stack.png)
+![CloudFormation stack](docs/screenshots/cloudformation-stack.png)
 
 **CloudFormation template**
-![CloudFormation template](screenshots/cloudformation-template.png)
+![CloudFormation template](docs/screenshots/cloudformation-template.png)
 
 **Lambda functions, all 15 deployed**
-![Lambda functions](screenshots/lambda-functions.png)
+![Lambda functions](docs/screenshots/lambda-functions.png)
 
 **Lambda source — book slot**
-![Lambda book slot](screenshots/lambda-book-slot-code.png)
+![Lambda book slot](docs/screenshots/lambda-book-slot-code.png)
 
 **Lambda source — delete booking**
-![Lambda delete booking](screenshots/lambda-delete-booking-code.png)
+![Lambda delete booking](docs/screenshots/lambda-delete-booking-code.png)
 
 **Lambda source — get slots**
-![Lambda get slots](screenshots/lambda-get-slots-code.png)
+![Lambda get slots](docs/screenshots/lambda-get-slots-code.png)
 
 **DynamoDB — slots table**
-![DynamoDB slots table](screenshots/dynamodb-slots-table.png)
+![DynamoDB slots table](docs/screenshots/dynamodb-slots-table.png)
 
 **DynamoDB — bookings table**
-![DynamoDB bookings table](screenshots/dynamodb-bookings-table.png)
+![DynamoDB bookings table](docs/screenshots/dynamodb-bookings-table.png)
 
 ### Monitoring
 
 **CloudWatch alarms**
-![CloudWatch alarm 1](screenshots/cloudwatch-alarm-01.png)
-![CloudWatch alarm 2](screenshots/cloudwatch-alarm-02.png)
-
-**CloudWatch metrics**
-![CloudWatch graphs](screenshots/cloudwatch-graphs.png)
+![CloudWatch alarm 1](docs/screenshots/cloudwatch-alarm-01.png)
+![CloudWatch alarm 2](docs/screenshots/cloudwatch-alarm-02.png)
 
 **CloudWatch logs**
-![CloudWatch logs](screenshots/cloudwatch-logs.png)
+![CloudWatch logs](docs/screenshots/cloudwatch-logs.png)
 
 ### CI/CD and repository
 
 **GitHub Actions — deployment history**
-![GitHub workflow runs](screenshots/github-workflow-runs.png)
+![GitHub workflow runs](docs/screenshots/github-workflow-runs.png)
 
 **Repository structure**
-![Repo structure](screenshots/repo-structure.png)
+![Repo structure](docs/screenshots/repo-structure.png)
 
 ---
 
