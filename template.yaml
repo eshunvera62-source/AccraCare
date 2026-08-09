@@ -745,10 +745,9 @@ Resources:
           - Id: FrontendS3Origin
             DomainName: !Sub ${FrontendBucket}.s3-website.${AWS::Region}.amazonaws.com
             CustomOriginConfig:
-              # SECURITY: Use HTTPS-only so all traffic to the S3 origin is encrypted.
-              OriginProtocolPolicy: https-only
-              OriginSSLProtocols:
-                - TLSv1.2
+              # S3 website endpoints only support HTTP. Viewer traffic remains
+              # HTTPS-only through CloudFront's redirect-to-https policy.
+              OriginProtocolPolicy: http-only
         DefaultCacheBehavior:
           TargetOriginId: FrontendS3Origin
           ViewerProtocolPolicy: redirect-to-https

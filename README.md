@@ -408,7 +408,7 @@ This project has been audited and hardened with the following security controls:
 
 ### CORS Hardening
 - **No wildcard `*`** — the `Access-Control-Allow-Origin` header is only set when the request's `Origin` matches the allow-list (`FRONTEND_ORIGIN` / `CORS_ORIGINS`).
-- CloudFront origin uses **`https-only`** protocol policy.
+- CloudFront viewers are redirected to HTTPS. (S3 website origins support HTTP only.)
 
 ### Input Validation & Injection Prevention
 - **Zod schemas** validate all path/query/body parameters on every TypeScript handler.
