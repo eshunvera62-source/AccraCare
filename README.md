@@ -358,6 +358,34 @@ aws s3 sync ../../frontend s3://<FrontendBucketName_from_output> --delete
 sam list stack-outputs --stack-name accra-hospital-capstone
 ```
 
+## AWS Deployment Guide
+
+AccraCare is deployed as a single AWS SAM/CloudFormation stack. It provisions the API Gateway API, Lambda functions, DynamoDB tables, SNS topics and subscriptions, CloudWatch logs and alarms, budget resources, and the S3/CloudFront frontend hosting resources.
+
+Before deploying, install and configure the AWS CLI and AWS SAM CLI, plus Node.js (for the TypeScript Lambda dependencies) and Python 3.12 (for seed-data tests and loading). The AWS identity must be able to create the resources in `template.yaml`, including IAM roles, Lambda, API Gateway, DynamoDB, SNS, CloudWatch, S3, CloudFront, Budgets, and CloudFormation.
+
+From the repository root, configure credentials, install the Lambda dependencies, validate, and build:
+
+```bash
+aws configure
+cd backend/src && npm install && cd ../..
+sam validate --lint
+sam build
+```
+
+For the first deployment, run `sam deploy --guided`. Choose a `dev`, `test`, or `prod` stage; enter the budget and notification email addresses; allow SAM to create IAM roles; and save the answers to `samconfig.toml`. Set `AdminApiKey` to a long random value for admin-only routes, and set `FrontendOrigin` to the CloudFront URL used by the browser client. Do not commit either value. Confirm the SNS subscription email so booking and operational alerts can be delivered.
+
+For later releases, use `sam build && sam deploy`. Retrieve the stack outputs with `sam list stack-outputs --stack-name accra-hospital-capstone`, load demo slots with `backend/seed/load_seed_data.py`, set `API_BASE_URL` in `frontend/scripts/api.js` to `ApiBaseUrl` (with no trailing slash), and sync the frontend to `FrontendBucketName`. Open `FrontendWebsiteUrl` and verify a booking, its SNS confirmation, and CloudWatch logs.
+
+Pushing to `main` runs the GitHub Actions workflow: it tests the seed scripts, validates/builds/deploys the SAM stack, seeds DynamoDB, injects the API URL into the frontend, syncs it to S3, and invalidates CloudFront. Configure the required secrets below before relying on that workflow.
+
+To avoid charges after the project is no longer needed, empty the deployment bucket before deleting the stack:
+
+```bash
+aws s3 rm s3://<FrontendBucketName> --recursive
+sam delete --stack-name accra-hospital-capstone
+```
+
 ## Local Development
 
 ```bash
