@@ -35,7 +35,11 @@ Parameters:
     Default: ''
     Description: >
       The CloudFront / frontend origin URL (e.g. https://d123.cloudfront.net)
-      used to validate CORS requests. Leave empty to allow localhost only.
+      used to validate CORS requests. When empty, the stack's CloudFront URL
+      is used automatically.
+
+Conditions:
+  HasFrontendOrigin: !Not [!Equals [!Ref FrontendOrigin, '']]
 
 Globals:
   Function:
@@ -47,8 +51,12 @@ Globals:
         STAGE: !Ref Stage
         # Shared admin API key — required by all admin-protected endpoints.
         ADMIN_API_KEY: !Ref AdminApiKey
-        # Trusted frontend origin for CORS validation.
-        FRONTEND_ORIGIN: !Ref FrontendOrigin
+        # Prefer an explicit custom domain, otherwise trust this stack's
+        # CloudFront distribution so the deployed frontend can call the API.
+        FRONTEND_ORIGIN: !If
+          - HasFrontendOrigin
+          - !Ref FrontendOrigin
+          - !Sub https://${FrontendCloudFrontDistribution.DomainName}
 
 Resources:
   # ---------------------------------------------------------------------
@@ -85,7 +93,10 @@ Resources:
         AllowHeaders: "'Content-Type,Authorization,x-api-key'"
         # SECURITY: Do NOT use '*' here. The Lambda response layer validates
         # the request Origin against the allow-list (CORS_ORIGINS / FRONTEND_ORIGIN).
-        AllowOrigin: !Sub "'${FrontendOrigin}'"
+        AllowOrigin: !If
+          - HasFrontendOrigin
+          - !Sub "'${FrontendOrigin}'"
+          - !Sub "'https://${FrontendCloudFrontDistribution.DomainName}'"
         MaxAge: "'600'"
       AccessLogSetting:
         DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
