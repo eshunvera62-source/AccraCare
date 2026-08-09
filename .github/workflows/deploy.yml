@@ -75,6 +75,27 @@ jobs:
 
       - name: SAM deploy
         run: |
+          ADMIN_API_KEY="${{ secrets.ADMIN_API_KEY }}"
+          FRONTEND_ORIGIN="${{ secrets.FRONTEND_ORIGIN }}"
+          parameters=(
+            "Stage=dev"
+            "BudgetLimitUsd=5"
+            "BudgetAlertEmail=${{ secrets.BUDGET_ALERT_EMAIL }}"
+            "NotificationEmail=${{ secrets.NOTIFICATION_EMAIL }}"
+          )
+
+          # Omit empty optional parameters: SAM rejects arguments such as
+          # AdminApiKey=. With no key, handlers fail closed (401) by design.
+          if [ -n "$ADMIN_API_KEY" ]; then
+            parameters+=("AdminApiKey=$ADMIN_API_KEY")
+          else
+            echo "::warning::ADMIN_API_KEY is not set; admin endpoints will fail closed"
+          fi
+
+          if [ -n "$FRONTEND_ORIGIN" ]; then
+            parameters+=("FrontendOrigin=$FRONTEND_ORIGIN")
+          fi
+
           sam deploy \
             --stack-name ${{ env.STACK_NAME }} \
             --region ${{ env.AWS_REGION }} \
@@ -82,13 +103,7 @@ jobs:
             --resolve-s3 \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --parameter-overrides \
-              Stage=dev \
-              BudgetLimitUsd=5 \
-              BudgetAlertEmail=${{ secrets.BUDGET_ALERT_EMAIL }} \
-              NotificationEmail=${{ secrets.NOTIFICATION_EMAIL }} \
-              AdminApiKey=${{ secrets.ADMIN_API_KEY }} \
-              FrontendOrigin=${{ secrets.FRONTEND_ORIGIN }}
+            --parameter-overrides "${parameters[@]}"
 
       - name: Capture stack outputs
         id: stack_outputs

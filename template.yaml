@@ -24,6 +24,7 @@ Parameters:
   AdminApiKey:
     Type: String
     NoEcho: true
+    Default: ''
     Description: >
       Shared secret API key required for admin-only endpoints
       (createSlot, updateSlotStatus, getBookings, deleteBooking, etc.).
