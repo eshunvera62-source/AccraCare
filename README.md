@@ -61,9 +61,6 @@ Everything above is one CloudFormation stack defined in template.yaml
 **Publishing a new slot and managing capacity**
 ![Admin staff portal](docs/screenshots/cloudformation-template.png)
 
-**Patient bookings registry**
-![Patient bookings registry](docs/screenshots/dynamodb-bookings-table.png)
-
 ### AWS infrastructure
 
 **CloudFormation stack, all resources deployed**
@@ -87,28 +84,16 @@ Everything above is one CloudFormation stack defined in template.yaml
 **DynamoDB — slots table**
 ![DynamoDB slots table](docs/screenshots/cloudwatch-logs.png)
 
-**DynamoDB — bookings table**
-![DynamoDB bookings table](docs/screenshots/lambda-functions.png)
-
 ### Monitoring
 
 **CloudWatch alarms**
 ![CloudWatch alarm 1](docs/screenshots/homepage.png)
-![CloudWatch alarm 2](docs/screenshots/homepage-booking-flow.png)
 
 **CloudWatch metrics**
 ![CloudWatch metrics](docs/screenshots/lambda-book-slot-code.png)
 
 **CloudWatch logs**
 ![CloudWatch logs](docs/screenshots/cloudwatch-alarm-01.png)
-
-### CI/CD and repository
-
-**GitHub Actions — deployment history**
-![GitHub workflow runs](docs/screenshots/dynamodb-slots-table.png)
-
-**Repository structure**
-![Repo structure](docs/screenshots/booking-confirmation.png)
 
 ---
 
