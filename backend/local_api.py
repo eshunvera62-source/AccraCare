@@ -42,6 +42,7 @@ CREATE_SLOT_HANDLER = load_handler("create_slot_handler", "backend/local_handler
 BOOK_SLOT_HANDLER = load_handler("book_slot_handler", "backend/local_handlers/book_slot.py")
 GET_BOOKINGS_HANDLER = load_handler("get_bookings_handler", "backend/local_handlers/get_bookings.py")
 UPDATE_SLOT_STATUS_HANDLER = load_handler("update_slot_status_handler", "backend/local_handlers/update_slot_status.py")
+DELETE_BOOKING_HANDLER = load_handler("delete_booking_handler", "backend/lambdas/delete_booking.py")
 
 
 class LocalApiHandler(BaseHTTPRequestHandler):
@@ -57,6 +58,9 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
     def do_PATCH(self):
         self._handle_request("PATCH")
+
+    def do_DELETE(self):
+        self._handle_request("DELETE")
 
     def do_OPTIONS(self):
         self._handle_request("OPTIONS")
@@ -95,7 +99,13 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             elif path == "/bookings" and method == "GET":
                 event = self._build_event(method, path, query_params, None)
                 response = GET_BOOKINGS_HANDLER.lambda_handler(event, None)
+            elif path.startswith("/bookings/") and method == "DELETE":
+                booking_id = path.split("/")[2]
+                event = self._build_event(method, path, query_params, None, path_parameters={"id": booking_id})
+                response = DELETE_BOOKING_HANDLER.lambda_handler(event, None)
             elif path == "/bookings" and method == "OPTIONS":
+                response = {"statusCode": 204, "headers": self._cors_headers(), "body": ""}
+            elif path.startswith("/bookings/") and method == "OPTIONS":
                 response = {"statusCode": 204, "headers": self._cors_headers(), "body": ""}
             elif path.startswith("/slots/") and method == "OPTIONS":
                 response = {"statusCode": 204, "headers": self._cors_headers(), "body": ""}
@@ -146,7 +156,7 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         return {
             "Access-Control-Allow-Origin": os.environ.get("FRONTEND_ORIGIN", "http://127.0.0.1:5500"),
             "Access-Control-Allow-Headers": "Content-Type,Authorization,x-api-key",
-            "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS"
+            "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS"
         }
 
 
@@ -155,14 +165,30 @@ def main():
     parser = argparse.ArgumentParser(description="Run a lightweight local API server for the AccraCare Lambda handlers")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=3001)
+    parser.add_argument(
+        "--admin-api-key",
+        help=(
+            "Local-only admin API key. This is equivalent to setting ADMIN_API_KEY "
+            "and is needed to view the patient bookings registry."
+        ),
+    )
     args = parser.parse_args()
+
+    # Keep the production-safe default: without a key, PII endpoints deny
+    # access. The option makes the local dashboard workflow explicit without
+    # requiring developers to place a secret in source control.
+    if args.admin_api_key:
+        os.environ["ADMIN_API_KEY"] = args.admin_api_key
 
     server = ThreadingHTTPServer((args.host, args.port), LocalApiHandler)
     print(f"Serving AccraCare local API on http://{args.host}:{args.port}")
     print(
         "Admin API key is configured for local development."
         if os.environ.get("ADMIN_API_KEY")
-        else "Admin endpoints are disabled until ADMIN_API_KEY is set."
+        else (
+            "Admin endpoints are disabled until ADMIN_API_KEY is set. "
+            "Use ADMIN_API_KEY=<key> or --admin-api-key <key>."
+        )
     )
     try:
         server.serve_forever()

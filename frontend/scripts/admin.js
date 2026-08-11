@@ -14,7 +14,7 @@
  * ---------------------------------------------------------------------------
  */
 
-import { fetchSlots, createSlot, fetchBookings, updateSlotStatus } from './api.js';
+import { fetchSlots, createSlot, fetchBookings, updateSlotStatus, deleteBooking } from './api.js';
 
 let allSlots = [];
 let allBookings = [];
@@ -292,7 +292,7 @@ function renderBookingsTable(filterSlotId) {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colSpan="6" style="text-align: center; color: var(--text-soft); padding: 2rem;">
+        <td colSpan="7" style="text-align: center; color: var(--text-soft); padding: 2rem;">
           No patient bookings recorded for this slot selection.
         </td>
       </tr>
@@ -322,10 +322,47 @@ function renderBookingsTable(filterSlotId) {
         </td>
         <td style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</td>
         <td><span class="badge badge-available">Confirmed</span></td>
+        <td>
+          <button
+            class="btn btn-outline"
+            style="padding: 0.3rem 0.65rem; font-size: 0.75rem; border-radius: 4px;"
+            data-cancel-booking-id="${b.id}"
+          >
+            Cancel
+          </button>
+        </td>
       </tr>
     `;
     })
     .join('');
+
+  tbody.querySelectorAll('[data-cancel-booking-id]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const bookingId = btn.dataset.cancelBookingId;
+      if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+
+      const alertEl = document.getElementById('create-slot-alert');
+      if (alertEl) alertEl.style.display = 'none';
+
+      try {
+        await deleteBooking(bookingId);
+        allBookings = allBookings.filter((b) => b.id !== bookingId);
+        renderBookingsTable(document.getElementById('admin-slot-filter')?.value || 'all');
+
+        if (alertEl) {
+          alertEl.className = 'alert-box alert-success';
+          alertEl.textContent = 'Booking cancelled successfully.';
+          alertEl.style.display = 'block';
+        }
+      } catch (err) {
+        if (alertEl) {
+          alertEl.className = 'alert-box alert-error';
+          alertEl.textContent = err.message || 'Failed to cancel booking.';
+          alertEl.style.display = 'block';
+        }
+      }
+    });
+  });
 }
 
 function escapeHtml(str) {

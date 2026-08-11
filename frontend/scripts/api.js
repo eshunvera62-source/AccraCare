@@ -191,3 +191,21 @@ export async function updateSlotStatus(slotId, newStatus) {
   });
   return data;
 }
+
+/**
+ * Cancels a booking by its ID.
+ * Admin-only — requires x-api-key header.
+ *
+ * @param {string} bookingId - The booking ID to cancel.
+ * @returns {Promise<object>} Deletion response.
+ */
+export async function deleteBooking(bookingId) {
+  const { ok, status, data } = await apiFetch(`/bookings/${bookingId}`, {
+    method: 'DELETE',
+    admin: true,
+  });
+  if (!ok) {
+    throw new Error(data?.error || `The appointment service returned HTTP ${status}.`);
+  }
+  return data;
+}

@@ -239,6 +239,16 @@ A lightweight local HTTP server (runs on `http://127.0.0.1:3001`) that loads the
 python backend/local_api.py --port 3001
 ```
 
+The patient bookings registry is an admin-only view. Start the local API with
+an admin key, then enter that same value as the staff dashboard password:
+
+```bash
+python backend/local_api.py --port 3001 --admin-api-key "your-local-admin-key"
+```
+
+Alternatively, set `ADMIN_API_KEY` in your shell before starting the server.
+Do not commit an API key to `backend/env.json` or the frontend.
+
 ### `backend/env.json`
 
 Local environment variables for `sam local invoke` and `sam local start-api`. It maps each function to its DynamoDB table names and region so handlers can run locally without deploying.
