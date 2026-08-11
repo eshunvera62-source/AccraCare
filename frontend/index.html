@@ -140,6 +140,32 @@
         </div>
       </div>
     </section>
+
+    <!-- Manage My Booking Section (Patient Self-Service) -->
+    <section id="manage-booking" style="margin-top: 4rem; padding-top: 3rem; border-top: 1px solid var(--border-light);">
+      <h2 style="margin-bottom: 0.25rem; text-align: center;">Manage My Booking</h2>
+      <p style="font-size: 0.85rem; color: var(--text-soft); text-align: center; margin-bottom: 1.5rem;">
+        Enter the email you used when booking to view and cancel your appointments.
+      </p>
+
+      <div style="max-width: 560px; margin: 0 auto; background: var(--bg-surface); border: 1px solid var(--border-light); padding: 1.5rem; border-radius: 8px;">
+        <div id="manage-booking-alert" style="display: none;"></div>
+
+        <form id="manage-booking-form">
+          <div class="form-group">
+            <label for="manage-booking-email">Email Address *</label>
+            <input type="email" id="manage-booking-email" class="form-control" placeholder="e.g. kwame.mensah@example.com" required />
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; border-radius: 8px;">
+            View My Bookings
+          </button>
+        </form>
+
+        <div id="my-bookings-list" style="margin-top: 1.5rem; display: none;">
+          <!-- Rendered by app.js -->
+        </div>
+      </div>
+    </section>
   </main>
   </div>
 

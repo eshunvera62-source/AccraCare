@@ -209,3 +209,42 @@ export async function deleteBooking(bookingId) {
   }
   return data;
 }
+
+/**
+ * Looks up a patient's own bookings by email.
+ * Public endpoint — no auth required. Only returns bookings for the
+ * provided email address.
+ *
+ * @param {string} email - The patient's email address.
+ * @returns {Promise<Array>} List of the patient's booking objects.
+ */
+export async function lookupMyBookings(email) {
+  const { ok, status, data } = await apiFetch('/bookings/lookup', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  if (!ok) {
+    throw new Error(data?.error || `The appointment service returned HTTP ${status}.`);
+  }
+  return data;
+}
+
+/**
+ * Cancels a patient's own booking by ID, verifying ownership via email.
+ * Public endpoint — no auth required. The server only deletes the booking
+ * if the provided email matches the booking's patientEmail.
+ *
+ * @param {string} email - The patient's email address.
+ * @param {string} bookingId - The booking ID to cancel.
+ * @returns {Promise<object>} Cancellation response.
+ */
+export async function cancelMyBooking(email, bookingId) {
+  const { ok, status, data } = await apiFetch('/bookings/cancel', {
+    method: 'POST',
+    body: JSON.stringify({ email, bookingId }),
+  });
+  if (!ok) {
+    throw new Error(data?.error || `The appointment service returned HTTP ${status}.`);
+  }
+  return data;
+}

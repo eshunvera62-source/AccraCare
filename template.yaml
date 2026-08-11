@@ -558,6 +558,48 @@ Resources:
             Path: /bookings/by-email/{email}
             Method: get
 
+  GetMyBookingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-get-my-bookings-${Stage}
+      Runtime: python3.12
+      CodeUri: backend/lambdas/
+      Handler: get_my_bookings.lambda_handler
+      Environment:
+        Variables:
+          BOOKINGS_TABLE: !Ref BookingsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BookingsTable
+      Events:
+        GetMyBookings:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /bookings/lookup
+            Method: post
+
+  CancelMyBookingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub accra-hospital-cancel-my-booking-${Stage}
+      Runtime: python3.12
+      CodeUri: backend/lambdas/
+      Handler: cancel_my_booking.lambda_handler
+      Environment:
+        Variables:
+          BOOKINGS_TABLE: !Ref BookingsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingsTable
+      Events:
+        CancelMyBooking:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayRestApi
+            Path: /bookings/cancel
+            Method: post
+
   GetSlotsFunction:
     Type: AWS::Serverless::Function
     Metadata:

@@ -43,6 +43,8 @@ BOOK_SLOT_HANDLER = load_handler("book_slot_handler", "backend/local_handlers/bo
 GET_BOOKINGS_HANDLER = load_handler("get_bookings_handler", "backend/local_handlers/get_bookings.py")
 UPDATE_SLOT_STATUS_HANDLER = load_handler("update_slot_status_handler", "backend/local_handlers/update_slot_status.py")
 DELETE_BOOKING_HANDLER = load_handler("delete_booking_handler", "backend/lambdas/delete_booking.py")
+GET_MY_BOOKINGS_HANDLER = load_handler("get_my_bookings_handler", "backend/lambdas/get_my_bookings.py")
+CANCEL_MY_BOOKING_HANDLER = load_handler("cancel_my_booking_handler", "backend/lambdas/cancel_my_booking.py")
 
 
 class LocalApiHandler(BaseHTTPRequestHandler):
@@ -99,6 +101,14 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             elif path == "/bookings" and method == "GET":
                 event = self._build_event(method, path, query_params, None)
                 response = GET_BOOKINGS_HANDLER.lambda_handler(event, None)
+            elif path == "/bookings/lookup" and method == "POST":
+                body = self._read_body()
+                event = self._build_event(method, path, query_params, body)
+                response = GET_MY_BOOKINGS_HANDLER.lambda_handler(event, None)
+            elif path == "/bookings/cancel" and method == "POST":
+                body = self._read_body()
+                event = self._build_event(method, path, query_params, body)
+                response = CANCEL_MY_BOOKING_HANDLER.lambda_handler(event, None)
             elif path.startswith("/bookings/") and method == "DELETE":
                 booking_id = path.split("/")[2]
                 event = self._build_event(method, path, query_params, None, path_parameters={"id": booking_id})
