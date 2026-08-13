@@ -6,6 +6,8 @@ AccraCare replaces manual appointment booking (paper forms / spreadsheets) with 
 scalable serverless REST API backed entirely by AWS managed services, deployed
 with AWS SAM (CloudFormation).
 
+**Live demo:** https://dvm40sl310hkp.cloudfront.net
+
 ---
 
 ## Problem Statement
@@ -39,7 +41,7 @@ Everything above is one CloudFormation stack defined in `template.yaml`.
 ![Booking dialog](docs/screenshots/github-workflow-runs.png)
 
 **Booking confirmation (SNS email)**
-![SNS booking confirmation](docs/screenshots/SNS.png)
+![SNS booking confirmation](docs/screenshots/SNS%202.png)
 
 ### Admin portal
 
