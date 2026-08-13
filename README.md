@@ -20,24 +20,9 @@ confirmation emails automatically via SNS.
 
 ## Architecture
 
-```
-Browser (S3 + CloudFront)
-      │
-      ▼
-API Gateway (REST API)
-      │
-      ▼
-AWS Lambda (Python 3.12 — one function per endpoint)
-      │
-      ▼
-DynamoDB (BookingsTable + SlotsTable, GSIs, TTL, PITR, SSE-KMS)
-      │
-      ├──> SNS  (booking confirmation + ops alerts)
-      └──> CloudWatch Logs + Alarms (error rate > 5%, 5xx)
+![AccraCare architecture](docs/screenshots/AccraCare%20architecture.png)
 
-AWS Budgets  — monthly spend alert at 80% / 100% of $5 limit
-Everything above is one CloudFormation stack defined in template.yaml
-```
+Everything above is one CloudFormation stack defined in `template.yaml`.
 
 ---
 
