@@ -38,8 +38,8 @@ Everything above is one CloudFormation stack defined in `template.yaml`.
 **Booking dialog**
 ![Booking dialog](docs/screenshots/github-workflow-runs.png)
 
-**Booking confirmation**
-![Booking confirmation](docs/screenshots/lambda-get-slots-code.png)
+**Booking confirmation (SNS email)**
+![SNS booking confirmation](docs/screenshots/SNS.png)
 
 ### Admin portal
 
@@ -51,28 +51,10 @@ Everything above is one CloudFormation stack defined in `template.yaml`.
 **CloudFormation stack, all resources deployed**
 ![CloudFormation stack](docs/screenshots/admin-staff-portal.png)
 
-**CloudFormation template**
-![CloudFormation template](docs/screenshots/booking-page.png)
-
-**Lambda functions, all 15 deployed**
-![Lambda functions](docs/screenshots/cloudformation-stack.png)
-
-**Lambda source — book slot**
-![Lambda book slot](docs/screenshots/lambda-delete-booking-code.png)
-
-**Lambda source — delete booking**
-![Lambda delete booking](docs/screenshots/booked-slots-on-ui.png)
-
-**Lambda source — get slots**
-![Lambda get slots](docs/screenshots/cloudwatch-alarm-02.png)
-
 **DynamoDB — slots table**
 ![DynamoDB slots table](docs/screenshots/cloudwatch-logs.png)
 
 ### Monitoring
-
-**CloudWatch alarms**
-![CloudWatch alarm 1](docs/screenshots/homepage.png)
 
 **CloudWatch metrics**
 ![CloudWatch metrics](docs/screenshots/lambda-book-slot-code.png)
