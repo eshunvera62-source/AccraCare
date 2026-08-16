@@ -21,11 +21,8 @@ with AWS SAM (CloudFormation).
   - [Screenshots](#screenshots)
     - [Architecture diagram](#architecture-diagram)
     - [Cloudwatch alarm](#cloudwatch-alarm)
-    - [Cloudformation template](#cloudformation-template)
-    - [Lambda – delete bookings](#lambda--delete-bookings)
-    - [SNS](#sns)
     - [Cloudformation stack](#cloudformation-stack)
-    - [Lambda functions deployed](#lambda-functions-deployed)
+    - [SNS](#sns)
     - [Homepage or frontend ui](#homepage-or-frontend-ui)
     - [Book Appointment](#book-appointment)
     - [Dynamo db slots](#dynamo-db-slots)
@@ -126,30 +123,15 @@ The stack is a mix of **Node.js 22 (TypeScript)** and **Python 3.12** Lambda han
 **Cloudwatch alarm**
 ![Cloudwatch alarm](docs/screenshots/cloudwatch-alarm-01.png)
 
-### Cloudformation template
-
-**Cloudformation template**
-![Cloudformation template](docs/screenshots/cloudformation-template.png)
-
-### Lambda – delete bookings
-
-**Lambda – delete bookings**
-![Lambda – delete bookings](docs/screenshots/lambda-delete-booking-code.png)
-
-### SNS
-
-**SNS**
-![SNS](docs/screenshots/SNS%202.png)
-
 ### Cloudformation stack
 
 **Cloudformation stack**
 ![Cloudformation stack](docs/screenshots/cloudformation-stack.png)
 
-### Lambda functions deployed
+### SNS
 
-**Lambda functions deployed**
-![Lambda functions deployed](docs/screenshots/lambda-get-slots-code.png)
+**SNS**
+![SNS](docs/screenshots/SNS%202.png)
 
 ### Homepage or frontend ui
 
