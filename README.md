@@ -19,10 +19,17 @@ with AWS SAM (CloudFormation).
   - [Problem Statement](#problem-statement)
   - [Architecture](#architecture)
   - [Screenshots](#screenshots)
-    - [Patient experience](#patient-experience)
-    - [Admin portal](#admin-portal)
-    - [AWS infrastructure](#aws-infrastructure)
-    - [Monitoring](#monitoring)
+    - [Architecture diagram](#architecture-diagram)
+    - [Cloudwatch alarm](#cloudwatch-alarm)
+    - [Cloudformation template](#cloudformation-template)
+    - [Lambda – delete bookings](#lambda--delete-bookings)
+    - [SNS](#sns)
+    - [Cloudformation stack](#cloudformation-stack)
+    - [Lambda functions deployed](#lambda-functions-deployed)
+    - [Homepage or frontend ui](#homepage-or-frontend-ui)
+    - [Book Appointment](#book-appointment)
+    - [Dynamo db slots](#dynamo-db-slots)
+    - [Cloudwatch lambda logs](#cloudwatch-lambda-logs)
   - [REST API Endpoints](#rest-api-endpoints)
   - [Project Layout](#project-layout)
   - [File \& Folder Reference](#file--folder-reference)
@@ -109,43 +116,60 @@ The stack is a mix of **Node.js 22 (TypeScript)** and **Python 3.12** Lambda han
 
 ## Screenshots
 
-### Patient experience
+### Architecture diagram
 
-**Homepage**
-![Homepage](docs/screenshots/homepage.png)
+**AccraCare architecture**
+![AccraCare architecture](docs/screenshots/AccraCare%20architecture.png)
 
-**Booking page**
-![Booking page](docs/screenshots/booking-page.png)
+### Cloudwatch alarm
 
-**Booked slots on UI**
-![Booked slots on UI](docs/screenshots/booked-slots-on-ui.png)
+**Cloudwatch alarm**
+![Cloudwatch alarm](docs/screenshots/cloudwatch-alarm-01.png)
 
-**SNS 2**
-![SNS 2](docs/screenshots/SNS%202.png)
+### Cloudformation template
 
-### Admin portal
+**Cloudformation template**
+![Cloudformation template](docs/screenshots/cloudformation-template.png)
 
-**Admin staff portal**
-![Admin staff portal](docs/screenshots/admin-staff-portal.png)
+### Lambda – delete bookings
 
-### AWS infrastructure
+**Lambda – delete bookings**
+![Lambda – delete bookings](docs/screenshots/lambda-delete-booking-code.png)
 
-**CloudFormation stack**
-![CloudFormation stack](docs/screenshots/cloudformation-stack.png)
+### SNS
 
-**Repo structure**
-![Repo structure](docs/screenshots/repo-structure.png)
+**SNS**
+![SNS](docs/screenshots/SNS%202.png)
 
-**GitHub workflow runs**
-![GitHub workflow runs](docs/screenshots/github-workflow-runs.png)
+### Cloudformation stack
 
-### Monitoring
+**Cloudformation stack**
+![Cloudformation stack](docs/screenshots/cloudformation-stack.png)
 
-**CloudWatch logs**
-![CloudWatch logs](docs/screenshots/cloudwatch-logs.png)
+### Lambda functions deployed
 
-**CloudWatch alarm 01**
-![CloudWatch alarm 01](docs/screenshots/cloudwatch-alarm-01.png)
+**Lambda functions deployed**
+![Lambda functions deployed](docs/screenshots/lambda-get-slots-code.png)
+
+### Homepage or frontend ui
+
+**Homepage or frontend ui**
+![Homepage or frontend ui](docs/screenshots/homepage.png)
+
+### Book Appointment
+
+**Book Appointment**
+![Book Appointment](docs/screenshots/booking-page.png)
+
+### Dynamo db slots
+
+**Dynamo db slots**
+![Dynamo db slots](docs/screenshots/booked-slots-on-ui.png)
+
+### Cloudwatch lambda logs
+
+**Cloudwatch lambda logs**
+![Cloudwatch lambda logs](docs/screenshots/cloudwatch-logs.png)
 
 ---
 
@@ -207,7 +231,7 @@ accra-hospital-capstone/
 
 ---
 
-## File & Folder Reference
+## File \& Folder Reference
 
 For a detailed per-file breakdown of the repository, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
