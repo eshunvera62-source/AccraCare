@@ -22,7 +22,6 @@ with AWS SAM (CloudFormation).
     - [Patient experience](#patient-experience)
     - [Admin portal](#admin-portal)
     - [AWS infrastructure](#aws-infrastructure)
-    - [Lambda code](#lambda-code)
     - [Monitoring](#monitoring)
   - [REST API Endpoints](#rest-api-endpoints)
   - [Project Layout](#project-layout)
@@ -134,36 +133,19 @@ The stack is a mix of **Node.js 22 (TypeScript)** and **Python 3.12** Lambda han
 **CloudFormation stack, all resources deployed**
 ![CloudFormation stack](docs/screenshots/cloudformation-stack.png)
 
-**CloudFormation template**
-![CloudFormation template](docs/screenshots/cloudformation-template.png)
-
 **Repository structure**
 ![Repository structure](docs/screenshots/repo-structure.png)
 
 **GitHub workflow runs**
 ![GitHub workflow runs](docs/screenshots/github-workflow-runs.png)
 
-### Lambda code
-
-**Book slot handler**
-![Book slot Lambda code](docs/screenshots/lambda-book-slot-code.png)
-
-**Delete booking handler**
-![Delete booking Lambda code](docs/screenshots/lambda-delete-booking-code.png)
-
-**Get slots handler**
-![Get slots Lambda code](docs/screenshots/lambda-get-slots-code.png)
-
 ### Monitoring
 
 **CloudWatch logs**
 ![CloudWatch logs](docs/screenshots/cloudwatch-logs.png)
 
-**CloudWatch alarm 1**
-![CloudWatch alarm 1](docs/screenshots/cloudwatch-alarm-01.png)
-
-**CloudWatch alarm 2**
-![CloudWatch alarm 2](docs/screenshots/cloudwatch-alarm-02.png)
+**CloudWatch alarm**
+![CloudWatch alarm](docs/screenshots/cloudwatch-alarm-01.png)
 
 ---
 
