@@ -114,27 +114,27 @@ The stack is a mix of **Node.js 22 (TypeScript)** and **Python 3.12** Lambda han
 **Homepage**
 ![Homepage](docs/screenshots/homepage.png)
 
-**Booking dialog**
-![Booking dialog](docs/screenshots/booking-page.png)
+**Booking page**
+![Booking page](docs/screenshots/booking-page.png)
 
 **Booked slots on UI**
 ![Booked slots on UI](docs/screenshots/booked-slots-on-ui.png)
 
-**Booking confirmation (SNS email)**
-![SNS booking confirmation](docs/screenshots/SNS%202.png)
+**SNS 2**
+![SNS 2](docs/screenshots/SNS%202.png)
 
 ### Admin portal
 
-**Publishing a new slot and managing capacity**
+**Admin staff portal**
 ![Admin staff portal](docs/screenshots/admin-staff-portal.png)
 
 ### AWS infrastructure
 
-**CloudFormation stack, all resources deployed**
+**CloudFormation stack**
 ![CloudFormation stack](docs/screenshots/cloudformation-stack.png)
 
-**Repository structure**
-![Repository structure](docs/screenshots/repo-structure.png)
+**Repo structure**
+![Repo structure](docs/screenshots/repo-structure.png)
 
 **GitHub workflow runs**
 ![GitHub workflow runs](docs/screenshots/github-workflow-runs.png)
@@ -144,8 +144,8 @@ The stack is a mix of **Node.js 22 (TypeScript)** and **Python 3.12** Lambda han
 **CloudWatch logs**
 ![CloudWatch logs](docs/screenshots/cloudwatch-logs.png)
 
-**CloudWatch alarm**
-![CloudWatch alarm](docs/screenshots/cloudwatch-alarm-01.png)
+**CloudWatch alarm 01**
+![CloudWatch alarm 01](docs/screenshots/cloudwatch-alarm-01.png)
 
 ---
 
